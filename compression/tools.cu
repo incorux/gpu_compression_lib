@@ -61,16 +61,16 @@ void tiPreatyPrintThrougput(tiManager &manager, int data_size)
    int gb = 1024 * 1024 * 1024, sec=1000;
    for(i=manager.begin(); i != manager.end(); ++i)
        sum += (*i)->__elapsedTime;
-   printf("Time, %.2f, ms, ", sum);
+   printf("Time, %.2f,ms, ", sum);
 
    sum = 0.0;
    for(i=manager.begin(); i != manager.end(); ++i)
        if ((*i)->name[0] == '*')
            sum += (*i)->__elapsedTime;
-   printf("Oper *, %.2f, ms, %.2f, GB/s, ", sum, ((float)data_size / gb)/ (sum/sec));
+   printf("*, %.2f,ms, %.2f,GB/s, ", sum, ((float)data_size / gb)/ (sum/sec));
 
    for(i=manager.begin(); i != manager.end(); ++i)
-       printf("%s, %.2f, ms, %.2f, GB/s, ", (*i)->name, (*i)->__elapsedTime, ((float)data_size / gb) / ((float)(*i)->__elapsedTime / sec) );
+       printf("%s, %.2f,ms, %.2f,GB/s, ", (*i)->name, (*i)->__elapsedTime, ((float)data_size / gb) / ((float)(*i)->__elapsedTime / sec) );
    printf("\n");
 }
 

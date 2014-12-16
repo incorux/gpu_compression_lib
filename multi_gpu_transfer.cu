@@ -6,8 +6,7 @@
 
 int gpuid_0=1, gpuid_1=2;
 
-#define PPRINT(name) printf("%c[1;34m",27);  printf name; printf("%c[30m %c[37m ", 27,27); TIMEIT_PRINT();
-#define PPRINT_THROUGPUT(name, data_size) printf("%c[1;34m",27);  printf name; printf("%c[30m, %c[1;32mOK%c[37m, ", 27,27,27); TIMEIT_PRINT_THROUGPUT(data_size);
+#define PPRINT_THROUGPUT(name, data_size) printf("%c[1;34m",27);  printf name; printf("%c[30m,%c[37m ", 27,27); TIMEIT_PRINT_THROUGPUT(data_size);
 
 __global__ void saxpy(size_t n, int a, int *x, int *y)
 {    
@@ -41,7 +40,7 @@ void multi_gpu_compress(size_t max_size, unsigned int bit_length, bool direct_co
 
     TIMEIT_START();
     run_avar_compress_gpu(comp_h, dev0_data, dev0_comp_out, max_size);
-    TIMEIT_END("*compress");
+    TIMEIT_END("*C");
     cudaErrorCheck();
 
     int *dev_data_source = dev0_comp_out;
@@ -58,7 +57,7 @@ void multi_gpu_compress(size_t max_size, unsigned int bit_length, bool direct_co
 
     TIMEIT_START();
     run_avar_decompress_gpu(comp_h, dev_data_source, dev1_data, max_size);
-    TIMEIT_END("*decompress");
+    TIMEIT_END("*D");
     cudaErrorCheck();
     
     TIMEIT_START();
@@ -66,7 +65,7 @@ void multi_gpu_compress(size_t max_size, unsigned int bit_length, bool direct_co
     cudaErrorCheck();
     TIMEIT_END("saxpy");
     
-    PPRINT_THROUGPUT(("Multi GPU direct %s compress avar %d", direct_copy ? "copy":"access", bit_length), max_size * sizeof(int));
+    PPRINT_THROUGPUT(("MGPU%s compr avar%d", direct_copy ? "copy":"access", bit_length), max_size * sizeof(int));
 
     mmCudaFreeAll(manager);
 }
@@ -104,7 +103,7 @@ void multi_gpu(size_t max_size, bool direct_copy)
     cudaErrorCheck();
     TIMEIT_END("saxpy");
     
-    PPRINT_THROUGPUT(("Multi GPU direct %s", direct_copy ? "copy":"access"), max_size * sizeof(int));
+    PPRINT_THROUGPUT(("MGPU%s", direct_copy ? "copy":"access"), max_size * sizeof(int));
 
     mmCudaFreeAll(manager);
 }
