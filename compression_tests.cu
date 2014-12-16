@@ -34,7 +34,7 @@ void avar_gpu_test(size_t max_size)
         gpuErrchk( cudaMemcpy(dev_data, host_data, max_size * sizeof(int), cudaMemcpyHostToDevice) );
         TIMEIT_END("M->G");
 
-        avar_header comp_h = { i, 32, 32};
+        avar_header comp_h = { i };
         cudaMemset(dev_out, 0, max_size * sizeof(int)); // Clean up before compression
 
         TIMEIT_START();
@@ -64,7 +64,7 @@ void avar_gpu_test(size_t max_size)
 
 int main(int argc, char *argv[])
 {
-    size_t max_size = 200000000;
+    size_t max_size = 100000000;
 
     if (argc > 1 && atol(argv[1]))
         max_size = atol(argv[1]);

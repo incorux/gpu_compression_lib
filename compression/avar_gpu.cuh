@@ -3,8 +3,6 @@
 typedef struct avar_header
 {
     unsigned int bit_length;
-    unsigned int warp_size;
-    unsigned int word_size;
 } avar_header;
 
 __global__ void avar_compress_gpu (avar_header comp_h, int *data, int *compressed_data, size_t length);

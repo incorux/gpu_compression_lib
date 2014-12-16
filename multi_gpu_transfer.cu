@@ -21,7 +21,7 @@ void multi_gpu_compress(size_t max_size, unsigned int bit_length, bool direct_co
     int *dev0_data, *dev0_comp_out;
     int *dev1_data, *dev1_data_out, *dev1_comp_out;
 
-    size_t comp_size = ((max_size * bit_length)/32 +32) * sizeof(int);
+    long comp_size = ((max_size * bit_length)/32 +32) * sizeof(int);
 
 
     gpuErrchk(cudaSetDevice(gpuid_0));
@@ -34,7 +34,7 @@ void multi_gpu_compress(size_t max_size, unsigned int bit_length, bool direct_co
     mmCudaMalloc(manager, (void **) &dev1_comp_out, comp_size);
 
     gpuErrchk(cudaSetDevice(gpuid_0));
-    avar_header comp_h = { bit_length, 32, 32};
+    avar_header comp_h = { bit_length } ;
 
     TIMEIT_SETUP();
 
@@ -53,6 +53,7 @@ void multi_gpu_compress(size_t max_size, unsigned int bit_length, bool direct_co
         cudaDeviceSynchronize();
         TIMEIT_END("*copy");
         dev_data_source = dev1_comp_out;
+        cudaErrorCheck();
     }
 
     TIMEIT_START();
@@ -111,7 +112,7 @@ void multi_gpu(size_t max_size, bool direct_copy)
 int main(int argc, char *argv[])
 {
 
-    size_t max_size = 200000000;
+    size_t max_size = 10000000;
     printf("%s [size] [dev0_id, dev1_id]\n", argv[0]);
     if(argc > 1) {
         if ( atol(argv[1]))
