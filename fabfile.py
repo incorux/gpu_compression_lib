@@ -1,6 +1,7 @@
 import fabric.contrib.project as project
 from fabric.api import local, settings, abort, run, cd, env, task
 from fabric.context_managers import *
+import os
 env.use_ssh_config = True
 
 #env.hosts = ["teslabot", "gpunode2"]
@@ -15,7 +16,7 @@ def sync():
 
 @task
 def make(*args):
-    with settings(output_prefix=False), cd(hosts_config[env.host]):
+    with settings(output_prefix=False), cd(hosts_config[env.host] + "/" + os.getcwd().split("/")[-1]):
         run("pwd")
         for arg in args:
             run("make -j 12 " + arg)

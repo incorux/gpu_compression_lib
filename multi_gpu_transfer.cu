@@ -9,20 +9,20 @@ int gpuid_0=1, gpuid_1=2;
 #define PPRINT(name) printf("%c[1;34m",27);  printf name; printf("%c[30m %c[37m ", 27,27); TIMEIT_PRINT();
 #define PPRINT_THROUGPUT(name, data_size) printf("%c[1;34m",27);  printf name; printf("%c[30m, %c[1;32mOK%c[37m, ", 27,27,27); TIMEIT_PRINT_THROUGPUT(data_size);
 
-__global__ void saxpy(int n, int a, int *x, int *y)
+__global__ void saxpy(size_t n, int a, int *x, int *y)
 {    
     // Determine element to process from thread index    
     for (int tid = blockIdx.x * blockDim.x + threadIdx.x; tid < n; tid += blockDim.x * gridDim.x) 
         y[tid] += a*x[tid];
 }
 
-void multi_gpu_compress(long max_size, unsigned int bit_length, bool direct_copy)
+void multi_gpu_compress(size_t max_size, unsigned int bit_length, bool direct_copy)
 {
     mmManager manager;
     int *dev0_data, *dev0_comp_out;
     int *dev1_data, *dev1_data_out, *dev1_comp_out;
 
-    long comp_size = ((max_size * bit_length)/32 +32) * sizeof(int);
+    size_t comp_size = ((max_size * bit_length)/32 +32) * sizeof(int);
 
 
     gpuErrchk(cudaSetDevice(gpuid_0));
@@ -72,7 +72,7 @@ void multi_gpu_compress(long max_size, unsigned int bit_length, bool direct_copy
 }
 
 
-void multi_gpu(int max_size, bool direct_copy)
+void multi_gpu(size_t max_size, bool direct_copy)
 {
     mmManager manager;
     int *dev0_data, *dev1_data;
@@ -111,6 +111,22 @@ void multi_gpu(int max_size, bool direct_copy)
 
 int main(int argc, char *argv[])
 {
+
+    size_t max_size = 200000000;
+    printf("%s [size] [dev0_id, dev1_id]\n", argv[0]);
+    if(argc > 1) {
+        if ( atol(argv[1]))
+            max_size = atol(argv[1]);
+
+        if (argc == 4) {
+            gpuid_0 = atoi(argv[2]);
+            gpuid_1 = atoi(argv[3]);
+        }
+    }
+
+    printf("Data size: %ld,using device %d and device %d\n", max_size, gpuid_0, gpuid_1 );
+
+
     int can_access_peer_0_1, can_access_peer_1_0;
     gpuErrchk(cudaDeviceCanAccessPeer(&can_access_peer_0_1, gpuid_0, gpuid_1));
     gpuErrchk(cudaDeviceCanAccessPeer(&can_access_peer_1_0, gpuid_1, gpuid_0));
@@ -122,7 +138,6 @@ int main(int argc, char *argv[])
     gpuErrchk(cudaSetDevice(gpuid_1));
     gpuErrchk(cudaDeviceEnablePeerAccess(gpuid_0, 0));
 
-    long max_size = 268435456;
 
     multi_gpu(max_size, true);
     multi_gpu(max_size, false);

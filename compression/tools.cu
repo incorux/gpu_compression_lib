@@ -116,30 +116,30 @@ void mmCudaFreeAll(mmManager &manager)
    manager.clear();
 }
 
-int compare_arrays(int *in1, int *in2, int size)
+int compare_arrays(int *in1, int *in2, size_t size)
 {
-    int count_errors = 0;
-    for(int i = 0; i < size; i++) {
+    size_t count_errors = 0;
+    for(size_t i = 0; i < size; i++) {
         if(in1[i] != in2[i]) {
-            printf("Error at %d element (%d != %d)\n ", i, in1[i], in2[i]);
+            printf("Error at %ld element (%d != %d)\n ", i, in1[i], in2[i]);
             count_errors += 1;
         }
     }
     if (count_errors)
-        DPRINT(("<================== ERROR ============= size = %d errors = %d\n", size, count_errors));
+        DPRINT(("<================== ERROR ============= size = %ld errors = %ld\n", size, count_errors));
     return count_errors;
 }
 
-int compare_arrays_float(float *in1, float *in2, int size)
+int compare_arrays_float(float *in1, float *in2, size_t size)
 {
     int count_errors = 0;
-    for(int i = 0; i < size; i++) {
+    for(size_t i = 0; i < size; i++) {
         if(in1[i] != in2[i]) {
-            DPRINT(("Error at %d element (%f != %f)\n ", i, in1[i], in2[i]));
+            DPRINT(("Error at %ld element (%f != %f)\n ", i, in1[i], in2[i]));
             count_errors += 1;
         }
     }
     if (count_errors)
-        DPRINT(("<================== ERROR ============= size = %d errors = %d\n", size, count_errors));
+        DPRINT(("<================== ERROR ============= size = %ld errors = %d\n", size, count_errors));
     return count_errors;
 }

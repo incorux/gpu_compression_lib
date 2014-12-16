@@ -17,47 +17,46 @@ __device__ __inline__ unsigned int GETNPBITS(
 #include "macros.cuh"
 #endif
 
-__global__ void avar_compress_gpu (avar_header comp_h, int *data, int *compressed_data, long length)
+__global__ void avar_compress_gpu (avar_header comp_h, int *data, int *compressed_data, size_t length)
 {
-    long warp_th = (threadIdx.x & 31); 
-    long pos = blockIdx.x * blockDim.x + threadIdx.x - warp_th;
-    long data_id = pos * 32 + warp_th;
-    long cdata_id = pos * comp_h.bit_length + warp_th;
+    long warp_th = (threadIdx.x % 32); 
+    size_t pos = blockIdx.x * blockDim.x + threadIdx.x - warp_th;
+    size_t data_id = pos * 32 + warp_th;
+    size_t cdata_id = pos * comp_h.bit_length + warp_th;
     avar_compress_base_gpu(comp_h, data_id, cdata_id, data, compressed_data, length);
 }
 
-__global__ void avar_decompress_gpu (avar_header comp_h, int *compressed_data, int * decompress_data, long length)
+__global__ void avar_decompress_gpu (avar_header comp_h, int *compressed_data, int * decompress_data, size_t length)
 {
-    long warp_th = (threadIdx.x & 31); 
-    long pos = blockIdx.x * blockDim.x + threadIdx.x - warp_th;
-    long data_id = pos * 32 + warp_th;
-    long cdata_id = pos * comp_h.bit_length + warp_th;
+    int warp_th = (threadIdx.x % 32); 
+    size_t pos = blockIdx.x * blockDim.x + threadIdx.x - warp_th;
+    size_t data_id = pos * 32 + warp_th;
+    size_t cdata_id = pos * comp_h.bit_length + warp_th;
     avar_decompress_base_gpu(comp_h, cdata_id, data_id, compressed_data, decompress_data, length);
 }
 
 
-__host__ void run_avar_compress_gpu(avar_header comp_h, int *data, int *compressed_data, long length)
+__host__ void run_avar_compress_gpu(avar_header comp_h, int *data, int *compressed_data, size_t length)
 {
     int block_size = 32 * 8;
-    long block_number = (length + block_size * comp_h.warp_size - 1) / (block_size * comp_h.warp_size);
+    size_t block_number = (length + block_size * comp_h.warp_size - 1) / (block_size * comp_h.warp_size);
     avar_compress_gpu <<<block_number, block_size>>> (comp_h, data, compressed_data, length);
 }
 
-__host__ void run_avar_decompress_gpu(avar_header comp_h, int *compressed_data, int *data, long length)
+__host__ void run_avar_decompress_gpu(avar_header comp_h, int *compressed_data, int *data, size_t length)
 {
     int block_size = 32 * 8;
-    long block_number = (length + block_size * comp_h.warp_size - 1) / (block_size * comp_h.warp_size);
+    size_t block_number = (length + block_size * comp_h.warp_size - 1) / (block_size * comp_h.warp_size);
     avar_decompress_gpu <<<block_number, block_size>>> (comp_h, compressed_data, data, length);
 }
 
 
-__device__  void avar_compress_base_gpu (avar_header comp_h, long data_id, long comp_data_id, int *data, int *compressed_data, long length)
+__device__  void avar_compress_base_gpu (avar_header comp_h, size_t data_id, size_t comp_data_id, int *data, int *compressed_data, size_t length)
 {
     int v1, value = 0;
     unsigned int v1_pos=0, v1_len;
-    long pos=comp_data_id, pos_decomp=data_id;
+    size_t pos=comp_data_id, pos_decomp=data_id;
 
-    /*#pragma unroll*/
     for (unsigned int i = 0; i < 32 && pos_decomp < length; ++i)
     {
         v1 = data[pos_decomp];
@@ -85,14 +84,13 @@ __device__  void avar_compress_base_gpu (avar_header comp_h, long data_id, long 
     }
 }
 
-__device__ void avar_decompress_base_gpu (avar_header comp_h, long comp_data_id, long data_id, int *compressed_data, int *data, long length)
+__device__ void avar_decompress_base_gpu (avar_header comp_h, size_t comp_data_id, size_t data_id, int *compressed_data, int *data, size_t length)
 {
-    long pos=comp_data_id, pos_decomp=data_id;
+    size_t pos=comp_data_id, pos_decomp=data_id;
     unsigned int v1_pos=0, v1_len;
     int v1, ret;
 
     v1 = compressed_data[pos];
-    /*#pragma unroll*/
     for (unsigned int i = 0; i < 32 && pos_decomp < length; ++i)
     {
         if (v1_pos + comp_h.bit_length >= comp_h.word_size){ 

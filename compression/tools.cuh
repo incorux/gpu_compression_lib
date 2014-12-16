@@ -28,9 +28,10 @@ inline int pow(int val, int pow)
 {
     return std::pow((double)val, pow);
 }
-inline void big_random_block( long size, int limit , int *data)
+
+inline void big_random_block( size_t size, int limit , int *data)
 {
-    for (int i=0; i<size; i++)
+    for (size_t i=0; i<size; i++)
         data[i] = rand() % limit;
 }
 
@@ -71,8 +72,8 @@ void tiPreatyPrintThrougput(tiManager &manager, int data_size);
 # define DPRINT(x) do {} while (0)
 #endif
 
-int compare_arrays(int *in1, int *in2, int size);
-int compare_arrays_float(float *in1, float *in2, int size);
+int compare_arrays(int *in1, int *in2, size_t size);
+int compare_arrays_float(float *in1, float *in2, size_t size);
 
 #define TIMEIT_SETUP() tiManager __tim__;
 #define TIMEIT_START() tiStart(__tim__);
