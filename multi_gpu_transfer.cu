@@ -21,7 +21,7 @@ void multi_gpu_compress(size_t max_size, unsigned int bit_length, bool direct_co
     int *dev0_data, *dev0_comp_out;
     int *dev1_data, *dev1_data_out, *dev1_comp_out;
 
-    long comp_size = ((max_size * bit_length)/32 +32) * sizeof(int);
+    size_t comp_size = ((max_size * bit_length)/32 +32) * sizeof(int);
 
 
     gpuErrchk(cudaSetDevice(gpuid_0));
@@ -40,8 +40,8 @@ void multi_gpu_compress(size_t max_size, unsigned int bit_length, bool direct_co
 
     TIMEIT_START();
     run_avar_compress_gpu(comp_h, dev0_data, dev0_comp_out, max_size);
-    TIMEIT_END("*C");
     cudaErrorCheck();
+    TIMEIT_END("*C");
 
     int *dev_data_source = dev0_comp_out;
     gpuErrchk(cudaSetDevice(gpuid_1));
@@ -50,7 +50,6 @@ void multi_gpu_compress(size_t max_size, unsigned int bit_length, bool direct_co
     {
         TIMEIT_START();
         cudaMemcpyPeerAsync(dev1_comp_out, gpuid_1, dev0_comp_out, gpuid_0, comp_size);
-        cudaDeviceSynchronize();
         TIMEIT_END("*copy");
         dev_data_source = dev1_comp_out;
         cudaErrorCheck();
@@ -58,8 +57,8 @@ void multi_gpu_compress(size_t max_size, unsigned int bit_length, bool direct_co
 
     TIMEIT_START();
     run_avar_decompress_gpu(comp_h, dev_data_source, dev1_data, max_size);
-    TIMEIT_END("*D");
     cudaErrorCheck();
+    TIMEIT_END("*D");
     
     TIMEIT_START();
     saxpy <<<4096, 512>>> (max_size, 10, dev1_data, dev1_data_out);

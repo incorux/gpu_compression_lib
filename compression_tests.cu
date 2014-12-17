@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
     int deviceCount = 0;
     cudaGetDeviceCount(&deviceCount);
 
-    for (int dev = 0; dev == 0 && dev < deviceCount; ++dev)
+    for (int dev = 0; dev < deviceCount; ++dev)
     {
         cudaSetDevice(dev);
         cudaDeviceProp deviceProp;
