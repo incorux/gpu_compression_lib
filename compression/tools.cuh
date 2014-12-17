@@ -8,7 +8,7 @@ __device__ __host__ int bitLen(int a);
 __device__ __host__ int bitLen2(int a);
 
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
-inline void gpuAssert(cudaError_t code, char *file, int line, bool abort=true)
+inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
 {
     if (code != cudaSuccess) 
     {
@@ -18,7 +18,7 @@ inline void gpuAssert(cudaError_t code, char *file, int line, bool abort=true)
 }
 
 #define cudaErrorCheck()  { _cudaErrorCheck(__FILE__, __LINE__); }
-inline void _cudaErrorCheck(char *file, int line)
+inline void _cudaErrorCheck(const char *file, int line)
 {
     gpuAssert( cudaPeekAtLastError(), file, line );
     gpuAssert( cudaDeviceSynchronize(), file, line );
@@ -61,7 +61,7 @@ typedef struct timeit_info
 typedef std::list<timeit_info *> tiManager;
 
 void tiStart(tiManager &manager);
-void tiEnd(tiManager &manager, char * name);
+void tiEnd(tiManager &manager, const char * name);
 void tiPreatyPrint(tiManager &manager);
 void tiClear(tiManager &manager);
 void tiPreatyPrintThrougput(tiManager &manager, int data_size);

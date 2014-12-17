@@ -32,7 +32,7 @@ void tiStart(tiManager &manager)
     manager.push_front(el);
 }
 
-void tiEnd(tiManager &manager, char * name)
+void tiEnd(tiManager &manager, const char * name)
 {
     timeit_info *el = manager.front();
 
@@ -40,7 +40,7 @@ void tiEnd(tiManager &manager, char * name)
     cudaEventSynchronize( el->__stop );
     cudaEventElapsedTime( &(el->__elapsedTime), el->__start, el->__stop );
     
-    el->name = name;
+    el->name = strdup(name);
 }
 void tiPreatyPrint(tiManager &manager)
 {
