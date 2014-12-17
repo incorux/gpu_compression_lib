@@ -21,7 +21,7 @@ debug: NVCCFLAGS += -g -G -DTHRUST_DEBUG
 debug: ctags $(PROGS) 
 
 clean:
-	rm -f $(CPU_LIBS) $(GPU_LIBS) $(ALL_LIBS) $(PROGS) *.o *.pyc tags
+	rm -f $(CPU_LIBS) $(GPU_LIBS) $(ALL_LIBS) $(PROGS) *.o *.pyc tags gpu_compression_lib.tar.bz2
 
 $(PROGS): %.out: %.o $(GPU_LIBS) $(CPU_LIBS) $(ALL_LIBS)
 	$(NVCC) $(NVCCFLAGS)  $< $(GPU_LIBS) $(CPU_LIBS) $(ALL_LIBS) -o $@
