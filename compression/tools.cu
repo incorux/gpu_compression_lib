@@ -84,22 +84,24 @@ void tiClear(tiManager &manager)
    manager.clear();
 }
 
-void mmCudaMallocHost(mmManager &manager, void **data, size_t size)
+void mmCudaMallocHost(mmManager &manager, void **data, unsigned long size)
 {
     gpuErrchk(cudaMallocHost(data, size));
     allocation_info el;// = {.data = *data, .size = size, .device = 0}; -- clang warns about this construction -- strange behavior 
     el.data = *data;
     el.size = size;
     el.device = 0;
+    el.freed = false;
     manager.push_front(el);
 }
-void mmCudaMalloc(mmManager &manager, void **data, size_t size)
+void mmCudaMalloc(mmManager &manager, void **data, unsigned long size)
 {
     gpuErrchk(cudaMalloc(data, size));
     allocation_info el;// = {.data = *data, .size = size, .device = 1};
     el.data = *data;
     el.size = size;
     el.device = 1;
+    el.freed = false;
     manager.push_front(el);
 }
 void mmCudaFreeAll(mmManager &manager)
@@ -107,19 +109,36 @@ void mmCudaFreeAll(mmManager &manager)
    mmManager::iterator i;
    for(i=manager.begin(); i != manager.end(); ++i) 
    {
-       if ((*i).device) { 
-           gpuErrchk(cudaFree((*i).data));
-       } else {
-           gpuErrchk(cudaFreeHost((*i).data));
-       }
+       if (!(*i).freed)
+           if ((*i).device) { 
+               gpuErrchk(cudaFree((*i).data));
+           } else {
+               gpuErrchk(cudaFreeHost((*i).data));
+           }
    }
    manager.clear();
 }
 
-int compare_arrays(int *in1, int *in2, size_t size)
+void mmCudaFree(mmManager &manager, void *ptr)
 {
-    size_t count_errors = 0;
-    for(size_t i = 0; i < size; i++) {
+   mmManager::iterator i;
+   for(i=manager.begin(); i != manager.end(); ++i) 
+   {
+       if ((*i).data == ptr && !(*i).freed) {
+           if ((*i).device) { 
+               gpuErrchk(cudaFree((*i).data));
+           } else {
+               gpuErrchk(cudaFreeHost((*i).data));
+           }
+           (*i).freed = true;
+       }
+   }
+}
+
+int compare_arrays(int *in1, int *in2, unsigned long size)
+{
+    unsigned long count_errors = 0;
+    for(unsigned long i = 0; i < size; i++) {
         if(in1[i] != in2[i]) {
             printf("Error at %ld element (%d != %d)\n ", i, in1[i], in2[i]);
             count_errors += 1;
@@ -130,10 +149,10 @@ int compare_arrays(int *in1, int *in2, size_t size)
     return count_errors;
 }
 
-int compare_arrays_float(float *in1, float *in2, size_t size)
+int compare_arrays_float(float *in1, float *in2, unsigned long size)
 {
     int count_errors = 0;
-    for(size_t i = 0; i < size; i++) {
+    for(unsigned long i = 0; i < size; i++) {
         if(in1[i] != in2[i]) {
             DPRINT(("Error at %ld element (%f != %f)\n ", i, in1[i], in2[i]));
             count_errors += 1;

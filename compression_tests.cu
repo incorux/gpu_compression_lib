@@ -11,7 +11,7 @@
 
 #define PPRINT_THROUGPUT(name, data_size) printf("%c[1;34m",27);  printf name; printf("%c[30m, %c[1;32mOK%c[37m, ", 27,27,27); TIMEIT_PRINT_THROUGPUT(data_size);
 
-void avar_gpu_test(size_t max_size)
+void avar_gpu_test(unsigned long max_size)
 {
     int *dev_out;
     int *dev_data;
@@ -64,7 +64,7 @@ void avar_gpu_test(size_t max_size)
 
 int main(int argc, char *argv[])
 {
-    size_t max_size = 100000000;
+    unsigned long max_size = 100000000;
 
     if (argc > 1 && atol(argv[1]))
         max_size = atol(argv[1]);

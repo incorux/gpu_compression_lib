@@ -8,20 +8,20 @@ int gpuid_0=1, gpuid_1=2;
 
 #define PPRINT_THROUGPUT(name, data_size) printf("%c[1;34m",27);  printf name; printf("%c[30m,%c[37m ", 27,27); TIMEIT_PRINT_THROUGPUT(data_size);
 
-__global__ void saxpy(size_t n, int a, int *x, int *y)
+__global__ void saxpy(unsigned long n, int a, int *x, int *y)
 {    
     // Determine element to process from thread index    
     for (int tid = blockIdx.x * blockDim.x + threadIdx.x; tid < n; tid += blockDim.x * gridDim.x) 
         y[tid] += a*x[tid];
 }
 
-void multi_gpu_compress(size_t max_size, unsigned int bit_length, bool direct_copy)
+void multi_gpu_compress(unsigned long max_size, unsigned int bit_length, bool direct_copy)
 {
     mmManager manager;
     int *dev0_data, *dev0_comp_out;
     int *dev1_data, *dev1_data_out, *dev1_comp_out;
 
-    size_t comp_size = ((max_size * bit_length)/32 +32) * sizeof(int);
+    unsigned long comp_size = ((max_size * bit_length)/32 + 32) * sizeof(int);
 
 
     gpuErrchk(cudaSetDevice(gpuid_0));
@@ -30,7 +30,6 @@ void multi_gpu_compress(size_t max_size, unsigned int bit_length, bool direct_co
 
     gpuErrchk(cudaSetDevice(gpuid_1));
     mmCudaMalloc(manager, (void **) &dev1_data, max_size * sizeof(int));
-    mmCudaMalloc(manager, (void **) &dev1_data_out, max_size * sizeof(int));
     mmCudaMalloc(manager, (void **) &dev1_comp_out, comp_size);
 
     gpuErrchk(cudaSetDevice(gpuid_0));
@@ -49,7 +48,7 @@ void multi_gpu_compress(size_t max_size, unsigned int bit_length, bool direct_co
     if (direct_copy)
     {
         TIMEIT_START();
-        cudaMemcpyPeerAsync(dev1_comp_out, gpuid_1, dev0_comp_out, gpuid_0, comp_size);
+        cudaMemcpyPeer(dev1_comp_out, gpuid_1, dev0_comp_out, gpuid_0, comp_size);
         TIMEIT_END("*copy");
         dev_data_source = dev1_comp_out;
         cudaErrorCheck();
@@ -59,6 +58,9 @@ void multi_gpu_compress(size_t max_size, unsigned int bit_length, bool direct_co
     run_avar_decompress_gpu(comp_h, dev_data_source, dev1_data, max_size);
     cudaErrorCheck();
     TIMEIT_END("*D");
+
+    mmCudaFree(manager, dev_data_source);
+    mmCudaMalloc(manager, (void **) &dev1_data_out, max_size * sizeof(int));
     
     TIMEIT_START();
     saxpy <<<4096, 512>>> (max_size, 10, dev1_data, dev1_data_out);
@@ -71,7 +73,7 @@ void multi_gpu_compress(size_t max_size, unsigned int bit_length, bool direct_co
 }
 
 
-void multi_gpu(size_t max_size, bool direct_copy)
+void multi_gpu(unsigned long max_size, bool direct_copy)
 {
     mmManager manager;
     int *dev0_data, *dev1_data;
@@ -92,10 +94,10 @@ void multi_gpu(size_t max_size, bool direct_copy)
     {
         TIMEIT_START();
         /*cudaMemcpy(dev1_data, dev0_data, max_size * sizeof(int), cudaMemcpyDefault);*/
-        cudaMemcpyPeerAsync(dev1_data, gpuid_1, dev0_data, gpuid_0, max_size * sizeof(int));
-        cudaDeviceSynchronize();
+        cudaMemcpyPeer(dev1_data, gpuid_1, dev0_data, gpuid_0, max_size * sizeof(int));
         TIMEIT_END("*copy");
         dev_data_source = dev1_data;
+        cudaErrorCheck();
     }
     
     TIMEIT_START();
@@ -111,7 +113,7 @@ void multi_gpu(size_t max_size, bool direct_copy)
 int main(int argc, char *argv[])
 {
 
-    size_t max_size = 10000000;
+    unsigned long max_size = 10000000;
     printf("%s [size] [dev0_id, dev1_id]\n", argv[0]);
     if(argc > 1) {
         if ( atol(argv[1]))
@@ -129,7 +131,7 @@ int main(int argc, char *argv[])
     int can_access_peer_0_1, can_access_peer_1_0;
     gpuErrchk(cudaDeviceCanAccessPeer(&can_access_peer_0_1, gpuid_0, gpuid_1));
     gpuErrchk(cudaDeviceCanAccessPeer(&can_access_peer_1_0, gpuid_1, gpuid_0));
-    printf("can acces device 0->1: %d  1->0 %d\n",can_access_peer_0_1, can_access_peer_1_0 );
+    printf("can acces device %d->%d: %d  %d->%d %d\n",gpuid_0, gpuid_1, can_access_peer_0_1, gpuid_1, gpuid_0, can_access_peer_1_0 );
 
     gpuErrchk(cudaSetDevice(gpuid_0));
     gpuErrchk(cudaDeviceEnablePeerAccess(gpuid_1, 0));
