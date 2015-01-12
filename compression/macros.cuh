@@ -1,27 +1,6 @@
 #ifndef macros
 #define macros 0
 
-#if __CUDA_ARCH__ > 120  // This improves performance 
-
-__device__ __inline__ unsigned int GETNPBITS(
-  int source,
-  unsigned int num_bits,
-  unsigned int bit_start)
- {
-  unsigned int bits;
-  asm("bfe.u32 %0, %1, %2, %3;" : "=r"(bits) : "r"((unsigned int) source), "r"(bit_start), "r"(num_bits));
-  return bits;
- }
-#define GETNBITS(X,N) GETNPBITS(X,N,0)
-
-#else
-
-#define GETNPBITS(a, n, p) GETNBITS((a>>p), (n)) 
-#define GETNBITS(a,n)  ((a) & NBITSTOMASK(n))
-
-#endif
-
-
 // This should work independently from _CUDA_ARCH__ number
 #define SGN(a) (int)((unsigned int)((int)a) >> (sizeof(int) * CHAR_BIT - 1))
 #define NBITSTOMASK(n) ((1<<(n)) - 1)
@@ -35,4 +14,40 @@ __device__ __inline__ unsigned int GETNPBITS(
 #define _unused(x) x __attribute__((unused))
 #define convert_struct(n, s)  struct sgn {signed int x:n;} __attribute__((unused)) s
 
+#define WARP_SIZE 32
+#define WORD_SIZE 32
+
+__device__ __host__ __forceinline__ unsigned int GETNPBITS( int source, unsigned int num_bits, unsigned int bit_start)
+{
+#if __CUDA_ARCH__ > 200  // This improves performance 
+    unsigned int bits;
+    asm("bfe.u32 %0, %1, %2, %3;" : "=r"(bits) : "r"((unsigned int) source), "r"(bit_start), "r"(num_bits));
+    return bits;
+#else
+    return ((source>>bit_start) & NBITSTOMASK(num_bits));
+#endif
+}
+
+__device__ __host__ __forceinline__ unsigned int GETNBITS( int source, unsigned int num_bits)
+{
+#if __CUDA_ARCH__ > 200  // Use bfe implementation
+    return GETNPBITS(source, num_bits, 0);
+#else
+    return ((source) & NBITSTOMASK(num_bits));
+#endif
+}
+
+__device__ __forceinline__ unsigned int BITLEN(unsigned int word) 
+{ 
+    unsigned int ret=0; 
+#if __CUDA_ARCH__ > 200  // This improves performance 
+    asm volatile ("bfind.u32 %0, %1;" : "=r"(ret) : "r"(word)); 
+#else
+    while (word >>= 1) // unroll for more speed...
+    {
+      ret++;
+    }
+#endif
+   return ret;
+}
 #endif
