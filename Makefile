@@ -2,12 +2,12 @@ NVCC=nvcc
 
 NVCCLIBSFLAGS = -dc 
 NVCCFLAGS    = -gencode arch=compute_20,code=sm_20 -gencode arch=compute_30,code=sm_30 -gencode arch=compute_35,code=sm_35
-NVCCFLAGS    += --compiler-options=-Wall,-Wno-unused-function -I$(CURDIR) -Ithrust -O3
+NVCCFLAGS    += --compiler-options=-Wall,-Wno-unused-function -I$(CURDIR) -Ithrust -O3 
 
 
 COMPRESSION_LIB_OBJ_BASE=
 COMPRESSION_LIB_OBJ_CPU =
-COMPRESSION_LIB_OBJ_GPU = compression/avar_gpu.o compression/tools.o
+COMPRESSION_LIB_OBJ_GPU = compression/avar_gpu.o compression/tools.o compression/pavar_gpu.o
 
 GPU_LIBS =  $(COMPRESSION_LIB_OBJ_GPU)
 CPU_LIBS =  $(COMPRESSION_LIB_OBJ_CPU)
@@ -19,6 +19,9 @@ all:$(PROGS)
 
 debug: NVCCFLAGS += -g -G -DTHRUST_DEBUG
 debug: ctags $(PROGS) 
+
+verbose: NVCCFLAGS += -Xptxas="-v"
+verbose: ctags $(PROGS) 
 
 clean:
 	rm -f $(CPU_LIBS) $(GPU_LIBS) $(ALL_LIBS) $(PROGS) *.o *.pyc tags gpu_compression_lib.tar.bz2

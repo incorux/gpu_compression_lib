@@ -43,10 +43,8 @@ __device__ __forceinline__ unsigned int BITLEN(unsigned int word)
 #if __CUDA_ARCH__ > 200  // This improves performance 
     asm volatile ("bfind.u32 %0, %1;" : "=r"(ret) : "r"(word)); 
 #else
-    while (word >>= 1) // unroll for more speed...
-    {
+    while (word >>= 1) 
       ret++;
-    }
 #endif
    return ret;
 }
