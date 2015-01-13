@@ -6,24 +6,67 @@
 
 #define BQ_CAPACITY 2048
 
-__global__ void pavar_compress_gpu (pavar_header comp_h, int *data, int *compressed_data, unsigned long length)
+__global__ void pavar_compress_gpu (
+        pavar_header comp_h, 
+        int *data, 
+        int *compressed_data, 
+        unsigned long length,
+
+        int *global_patch_values,
+        int *global_patch_index,
+        int *global_patch_count
+        )
 {
     int warp_th = (threadIdx.x % WARP_SIZE); 
     unsigned long pos = blockIdx.x * blockDim.x + threadIdx.x - warp_th;
     unsigned long data_id = pos * WARP_SIZE + warp_th;
     unsigned long cdata_id = pos * comp_h.bit_length + warp_th;
 
-
     __shared__ int private_patch_values[BQ_CAPACITY];
     __shared__ int private_patch_index[BQ_CAPACITY];
-    __shared__ int private_patch_count[1];
 
-    if(threadIdx.x == 0) {
+    __shared__ int private_patch_count[1];
+    __shared__ int old_global_patch_count[1];
+
+    if(threadIdx.x == 0) 
         private_patch_count[0] = 0;
-    }
+
     __syncthreads();
 
-    /*avar_compress_base_gpu(comp_h, data_id, cdata_id, data, compressed_data, length);*/
+    pavar_compress_base_gpu(
+            comp_h, 
+            data_id, 
+            cdata_id, 
+
+            data, 
+            compressed_data, 
+            length,
+
+            private_patch_values,
+            private_patch_index,
+            private_patch_count,
+
+            global_patch_values,
+            global_patch_index,
+            global_patch_count
+            );
+
+    __syncthreads();
+
+    // reserve space for outliers
+    if (threadIdx.x == 0) 
+        old_global_patch_count[0] = atomicAdd(global_patch_count, private_patch_count[0]); 
+
+    __syncthreads();
+
+    // write in paralel outliers to global memory
+    int gpos = old_global_patch_count[0]; // get global memory index
+    int pcount = private_patch_count[0]; // get outliers count from shared memory
+
+    for (int i = threadIdx.x; i < pcount; i += blockDim.x) {
+        global_patch_values[gpos + i] = private_patch_values[i];
+        global_patch_index[gpos + i] = private_patch_index[i];
+    }
 }
 
 __global__ void pavar_decompress_gpu (pavar_header comp_h, int *compressed_data, int * decompress_data, unsigned long length)
@@ -52,10 +95,13 @@ __host__ void run_pavar_decompress_gpu(pavar_header comp_h, int *compressed_data
 
 __device__  void pavar_compress_base_gpu (
         pavar_header comp_h, 
+
         unsigned long data_id, 
         unsigned long comp_data_id, 
+
         int *data, 
         int *compressed_data, 
+        unsigned long length,
 
         int *private_patch_values,
         int *private_patch_index,
@@ -63,14 +109,12 @@ __device__  void pavar_compress_base_gpu (
 
         int *global_patch_values,
         int *global_patch_index,
-        int *global_patch_count,
-        unsigned long length
+        int *global_patch_count
         )
 {
     int v1, value = 0;
     unsigned int v1_pos=0, v1_len;
     unsigned long pos=comp_data_id, pos_decomp=data_id;
-
 
     for (unsigned int i = 0; i < WARP_SIZE && pos_decomp < length; ++i)
     {
@@ -92,28 +136,24 @@ __device__  void pavar_compress_base_gpu (
             value = value | (GETNBITS(v1, v1_len) << v1_pos);
             v1_pos += v1_len;
         }
-        // if outlier is found write it to shared memory (or global if shared is full)
-        if (BITLEN(v1) > comp_h.patch_bit_length)
-        {
+
+        // check if value is outlier, if so write it to shared memory (or global if shared is full)
+        if (BITLEN(v1) > comp_h.patch_bit_length) { // TODO: przetestować wersje z maską 
             unsigned int p_pos = atomicAdd(private_patch_count, 1); 
-            if (p_pos < BQ_CAPACITY)
-            {
+            if (p_pos < BQ_CAPACITY) {
                 private_patch_values[p_pos] = v1;
                 private_patch_index[p_pos] = pos_decomp;
             } else {
                 // in case shared memory is full
-                unsigned int p_pos = atomicAdd(global_patch_count, 1); 
+                p_pos = atomicAdd(global_patch_count, 1); 
                 global_patch_values[p_pos] = v1;
                 global_patch_index[p_pos] = pos_decomp;
             }
         }
     }
-    if (pos_decomp >= length  && pos_decomp < length + WARP_SIZE)
-    {
-        compressed_data[pos] = value;
-    }
-    // TODO: zapisac patche 
 
+    if (pos_decomp >= length  && pos_decomp < length + WARP_SIZE)
+        compressed_data[pos] = value;
 }
 
 
@@ -122,3 +162,8 @@ TODO: mozna to jeszcze bardziej poprawic (tzn. dokonywac kompresji w locie poprz
 tzn. kazdy z nich dostaje id elementu, wylicza ktorych elementow to dotyczy i robi na nich atomowe OR
 Wazne pamietac o wyzerowaniu shared memory na poczatku
 */
+/*
+TODO:
+  * kompresujemy dane w shared i zapisujemy do global (wyrownojemy kompresje - tzn. nadmiarowe elementy zapisujemy do global)
+  * na koncu kompresuj dane z global (threadfence albo nowe wywolanie)
+  */

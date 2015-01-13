@@ -7,5 +7,8 @@
         "alternate": "{}.cu",
         "type": "header"
     },
-    "*": {"make": "fab\ -H\ teslabot\ all:all"}
+    "*": {
+        "make": "fab -H gpunode2 all:all",
+        "compiler": "gcc"
+    }
 }
