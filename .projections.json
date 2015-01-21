@@ -8,7 +8,7 @@
         "type": "header"
     },
     "*": {
-        "make": "fab -H gpunode2 all:all",
+        "rmake": "fab -H teslabot all:all",
         "compiler": "gcc"
     }
 }
