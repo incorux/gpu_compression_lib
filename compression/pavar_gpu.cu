@@ -12,9 +12,13 @@ __global__ void pavar_compress_gpu (
         int *compressed_data, 
         unsigned long length,
 
-        int *global_patch_values,
-        int *global_patch_index,
-        int *global_patch_count
+        int *global_queue_patch_values,
+        int *global_queue_patch_index,
+        int *global_queue_patch_count,
+
+        int *global_data_patch_values,
+        int *global_data_patch_index,
+        int *global_data_patch_count
         )
 {
     int warp_th = (threadIdx.x % WARP_SIZE); 
@@ -46,16 +50,16 @@ __global__ void pavar_compress_gpu (
             private_patch_index,
             private_patch_count,
 
-            global_patch_values,
-            global_patch_index,
-            global_patch_count
+            global_queue_patch_values,
+            global_queue_patch_index,
+            global_queue_patch_count
             );
 
     __syncthreads();
 
     // reserve space for outliers
     if (threadIdx.x == 0) 
-        old_global_patch_count[0] = atomicAdd(global_patch_count, private_patch_count[0]); 
+        old_global_patch_count[0] = atomicAdd(global_queue_patch_count, private_patch_count[0]); 
 
     __syncthreads();
 
@@ -64,8 +68,8 @@ __global__ void pavar_compress_gpu (
     int pcount = private_patch_count[0]; // get outliers count from shared memory
 
     for (int i = threadIdx.x; i < pcount; i += blockDim.x) {
-        global_patch_values[gpos + i] = private_patch_values[i];
-        global_patch_index[gpos + i] = private_patch_index[i];
+        global_queue_patch_values[gpos + i] = private_patch_values[i];
+        global_queue_patch_index[gpos + i] = private_patch_index[i];
     }
 }
 

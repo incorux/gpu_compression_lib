@@ -1,5 +1,5 @@
-#ifndef AVAR_H
-#define AVAR_H 1
+#ifndef PAVAR_H
+#define PAVAR_H 1
 typedef struct pavar_header
 {
     unsigned int bit_length;

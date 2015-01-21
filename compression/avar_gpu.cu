@@ -1,21 +1,6 @@
 #include "avar_gpu.cuh"
-#include <stdio.h>
-
-
-#if __CUDA_ARCH__ > 120  // This improves performance 
-__device__ __inline__ unsigned int GETNPBITS(
-  int source,
-  unsigned int num_bits,
-  unsigned int bit_start)
- {
-  unsigned int bits;
-  asm("bfe.u32 %0, %1, %2, %3;" : "=r"(bits) : "r"((unsigned int) source), "r"(bit_start), "r"(num_bits));
-  return bits;
- }
-#define GETNBITS(X,N) GETNPBITS(X,N,0)
-#else
 #include "macros.cuh"
-#endif
+#include <stdio.h>
 
 #define WARP_SIZE 32
 #define WORD_SIZE 32
@@ -52,7 +37,6 @@ __host__ void run_avar_decompress_gpu(avar_header comp_h, int *compressed_data, 
     unsigned long block_number = (length + block_size * WARP_SIZE - 1) / (block_size * WARP_SIZE);
     avar_decompress_gpu <<<block_number, block_size>>> (comp_h, compressed_data, data, length);
 }
-
 
 __device__  void avar_compress_base_gpu (avar_header comp_h, unsigned long data_id, unsigned long comp_data_id, int *data, int *compressed_data, unsigned long length)
 {

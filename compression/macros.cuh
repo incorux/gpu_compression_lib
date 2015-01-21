@@ -48,4 +48,5 @@ __device__ __forceinline__ unsigned int BITLEN(unsigned int word)
 #endif
    return ret;
 }
+
 #endif
