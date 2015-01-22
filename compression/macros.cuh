@@ -2,14 +2,11 @@
 #define macros 0
 
 // This should work independently from _CUDA_ARCH__ number
-#define SGN(a) (int)((unsigned int)((int)a) >> (sizeof(int) * CHAR_BIT - 1))
-#define NBITSTOMASK(n) ((1<<(n)) - 1)
-#define GETNSGNBITS(a,n,b) ((SGN(a) << (n-1)) | GETNBITS(((a)>>(b-n)), (n-1))) 
-#define RECONSTRUCT(a1, n1, p1, a2, n2, p2) GETNPBITS(a1, n1, p1) << (n2) | GETNPBITS(a2, n2, p2)
 
-#define fillto8(c) (((c + 8 - 1) / 8) * 8)
+#define NBITSTOMASK(n) ((1<<(n)) - 1)
+#define LNBITSTOMASK(n) ((1L<<(n)) - 1)
+
 #define fillto(b,c) (((c + b - 1) / b) * b)
-#define fillto4(c) (((c + 4 - 1) / 4) * 4)
 
 #define _unused(x) x __attribute__((unused))
 #define convert_struct(n, s)  struct sgn {signed int x:n;} __attribute__((unused)) s
@@ -49,15 +46,9 @@ __device__ __forceinline__ unsigned int BITLEN(unsigned int word)
    return ret;
 }
 
-__device__ __host__ int bitLen(int a)
-{
-    int l = 1;
-    while( (a = a>>1) ) l ++;
-    return l;
-}
 
 __host__ __device__
-int bitLen2( int v)
+int ALT_BITLEN( int v)
 {
     register unsigned int r; // result of log2(v) will go here
     register unsigned int shift;
@@ -69,5 +60,8 @@ int bitLen2( int v)
     r |= (v >> 1);
     return r+1;
 }
+
+#define SGN(a) (int)((unsigned int)((int)a) >> (sizeof(int) * CHAR_BIT - 1))
+#define GETNSGNBITS(a,n,b) ((SGN(a) << (n-1)) | GETNBITS(((a)>>(b-n)), (n-1))) 
 
 #endif
