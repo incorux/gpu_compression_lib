@@ -71,28 +71,71 @@ __global__ void pavar_compress_gpu (
         global_queue_patch_values[gpos + i] = private_patch_values[i];
         global_queue_patch_index[gpos + i] = private_patch_index[i];
     }
+
+    __syncthreads();
+    int patch_count = global_queue_patch_count[0];
+
+    cdata_id = pos * comp_h.bit_length + warp_th; // reuse for PATCH compression
+    
+    //Compress values
+    avar_header patch_header = {comp_h.patch_bit_length};
+    avar_compress_base_gpu(patch_header, data_id, cdata_id, global_queue_patch_values, global_data_patch_values, patch_count);
+
+    //Compress index
+    patch_header.bit_length = 0; //TODO: policzyć względem rozmiaru danych 
+    avar_compress_base_gpu(patch_header, data_id, cdata_id, global_queue_patch_values, global_data_patch_index, patch_count);
+
 }
 
-__global__ void pavar_decompress_gpu (pavar_header comp_h, int *compressed_data, int * decompress_data, unsigned long length)
+__global__ void pavar_decompress_gpu (pavar_header comp_h, int *compressed_data, int * decompress_data, unsigned long length) //TODO: fix params list
 {
-    int warp_th = (threadIdx.x % WARP_SIZE); 
+    int warp_th = (threadIdx.x % WARP_SIZE);
     unsigned long pos = blockIdx.x * blockDim.x + threadIdx.x - warp_th;
     unsigned long data_id = pos * WARP_SIZE + warp_th;
     unsigned long cdata_id = pos * comp_h.bit_length + warp_th;
-    /*avar_decompress_base_gpu(comp_h, cdata_id, data_id, compressed_data, decompress_data, length);*/
+
+    avar_header cheader = {comp_h.patch_bit_length};
+    /*avar_decompress_base_gpu(cheader, cdata_id, data_id, compressed_data, decompress_data, length);*/
 }
 
-__host__ void run_pavar_compress_gpu(pavar_header comp_h, int *data, int *compressed_data, unsigned long length)
+__host__ void run_pavar_compress_gpu(
+        pavar_header comp_h, 
+        int *data, 
+        int *compressed_data, 
+        unsigned long length,
+        
+        int *global_queue_patch_values,
+        int *global_queue_patch_index,
+        int *global_queue_patch_count,
+
+        int *global_data_patch_values,
+        int *global_data_patch_index,
+        int *global_data_patch_count
+        )
 {
-    int block_size = WARP_SIZE * 8; // better occupancy 
+    int block_size = WARP_SIZE * 8; // better occupancy
     unsigned long block_number = (length + block_size * WARP_SIZE - 1) / (block_size * WARP_SIZE);
-    /*avar_compress_gpu <<<block_number, block_size>>> (comp_h, data, compressed_data, length);*/
+
+    pavar_compress_gpu <<<block_number, block_size>>> (
+            comp_h, 
+            data, 
+            compressed_data, 
+            length,
+
+            global_queue_patch_values,
+            global_queue_patch_index,
+            global_queue_patch_count,
+
+            global_data_patch_values,
+            global_data_patch_index,
+            global_data_patch_count
+            );
 }
 
 __host__ void run_pavar_decompress_gpu(pavar_header comp_h, int *compressed_data, int *data, unsigned long length)
 {
-    int block_size = WARP_SIZE * 8; // better occupancy
-    unsigned long block_number = (length + block_size * WARP_SIZE - 1) / (block_size * WARP_SIZE);
+    /*int block_size = WARP_SIZE * 8; // better occupancy*/
+    /*unsigned long block_number = (length + block_size * WARP_SIZE - 1) / (block_size * WARP_SIZE);*/
     /*avar_decompress_gpu <<<block_number, block_size>>> (comp_h, compressed_data, data, length);*/
     //TODO: nalozenie PATCH
 }
@@ -119,6 +162,7 @@ __device__  void pavar_compress_base_gpu (
     int v1, value = 0;
     unsigned int v1_pos=0, v1_len;
     unsigned long pos=comp_data_id, pos_decomp=data_id;
+    unsigned int mask = NBITSTOMASK(comp_h.patch_bit_length);
 
     for (unsigned int i = 0; i < WARP_SIZE && pos_decomp < length; ++i)
     {
@@ -142,7 +186,7 @@ __device__  void pavar_compress_base_gpu (
         }
 
         // check if value is outlier, if so write it to shared memory (or global if shared is full)
-        if (BITLEN(v1) > comp_h.patch_bit_length) { // TODO: przetestować wersje z maską 
+        if ( v1 & mask) { 
             unsigned int p_pos = atomicAdd(private_patch_count, 1); 
             if (p_pos < BQ_CAPACITY) {
                 private_patch_values[p_pos] = v1;

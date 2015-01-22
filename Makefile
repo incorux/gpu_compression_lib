@@ -35,7 +35,7 @@ $(PROGS): %.out: %.o $(GPU_LIBS) $(CPU_LIBS) $(ALL_LIBS)
 	$(NVCC) $(NVCCFLAGS) $(NVCCLIBSFLAGS) $< -o $@
 
 ctags:
-	@ctags --langmap=c++:+.cu --append=no *.cu compression/*.{cu,cuh} 2>&1 /dev/null
+	@ctags --langmap=c++:+.cu --append=no *.cu*  compression/*.cu* 2>&1 /dev/null
 
 fixcuda:
 	sudo nvidia-smi -pm 1

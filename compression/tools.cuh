@@ -5,35 +5,27 @@
 #include <stdio.h>
 #include <list>
 
+// Tools
+void big_random_block( unsigned long size, int limit_bits, int *data);
+int compare_arrays(int *in1, int *in2, unsigned long size);
+int compare_arrays_float(float *in1, float *in2, unsigned long size);
+
+// Errors and debug
+void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true);
+void _cudaErrorCheck(const char *file, int line);
+
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
-inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
-{
-    if (code != cudaSuccess) 
-    {
-        fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
-        if (abort) exit(code);
-    }
-}
-
 #define cudaErrorCheck()  { _cudaErrorCheck(__FILE__, __LINE__); }
-inline void _cudaErrorCheck(const char *file, int line)
-{
-    gpuAssert( cudaPeekAtLastError(), file, line );
-    gpuAssert( cudaDeviceSynchronize(), file, line );
-}
 
-inline int pow(int val, int pow)
-{
-    return std::pow((double)val, pow);
-}
+#define DEBUG 1
 
-inline void big_random_block( unsigned long size, int limit_bits, int *data)
-{
-    unsigned int mask = NBITSTOMASK(limit_bits);
-    for (unsigned long i = 0; i < size; i++)
-        data[i] = rand() & mask;
-}
+#ifdef DEBUG
+# define DPRINT(x) printf x
+#else
+# define DPRINT(x) do {} while (0)
+#endif
 
+// Memory allocation manager
 typedef struct allocation_info
 {
     void *data;
@@ -49,6 +41,7 @@ void mmCudaMalloc(mmManager &manager, void **data, unsigned long size);
 void mmCudaFreeAll(mmManager &manager);
 void mmCudaFree(mmManager &manager, void *ptr);
 
+// Time measuring tools
 typedef struct timeit_info
 {
     float __elapsedTime; 
@@ -64,17 +57,6 @@ void tiEnd(tiManager &manager, const char * name);
 void tiPreatyPrint(tiManager &manager);
 void tiClear(tiManager &manager);
 void tiPreatyPrintThrougput(tiManager &manager, int data_size);
-
-
-#define DEBUG 1
-#ifdef DEBUG
-# define DPRINT(x) printf x
-#else
-# define DPRINT(x) do {} while (0)
-#endif
-
-int compare_arrays(int *in1, int *in2, unsigned long size);
-int compare_arrays_float(float *in1, float *in2, unsigned long size);
 
 #define TIMEIT_SETUP() tiManager __tim__;
 #define TIMEIT_START() tiStart(__tim__);

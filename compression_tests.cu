@@ -56,6 +56,7 @@ void avar_gpu_test(unsigned long max_size)
         TIMEIT_END("G->M");
 
         compare_arrays(host_data2, host_data, max_size);
+
         PPRINT_THROUGPUT(("GPU avar%d", i), max_size * sizeof(int));
     }
 
@@ -95,14 +96,16 @@ void pavar_gpu_test(unsigned long max_size)
         cudaMemset(dev_out, 0, max_size * sizeof(int)); // Clean up before compression
 
         TIMEIT_START();
-        run_pavar_compress_gpu(comp_h, dev_data, dev_out, max_size);
+        //TODO
+        /*run_pavar_compress_gpu(comp_h, dev_data, dev_out, max_size);*/
         TIMEIT_END("*comp");
         cudaErrorCheck();
 
         cudaMemset(dev_data, 0, max_size * sizeof(int)); // Clean up before decompression
 
         TIMEIT_START();
-        run_pavar_decompress_gpu(comp_h, dev_out, dev_data, max_size);
+        //TODO
+        /*run_pavar_decompress_gpu(comp_h, dev_out, dev_data, max_size);*/
         TIMEIT_END("*decomp");
         cudaErrorCheck();
 
@@ -112,6 +115,7 @@ void pavar_gpu_test(unsigned long max_size)
         TIMEIT_END("G->M");
 
         compare_arrays(host_data2, host_data, max_size);
+
         PPRINT_THROUGPUT(("GPU avar%d", i), max_size * sizeof(int));
     }
 

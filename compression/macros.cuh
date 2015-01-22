@@ -46,9 +46,8 @@ __device__ __forceinline__ unsigned int BITLEN(unsigned int word)
    return ret;
 }
 
-
 __host__ __device__
-int ALT_BITLEN( int v)
+inline int ALT_BITLEN( int v)
 {
     register unsigned int r; // result of log2(v) will go here
     register unsigned int shift;

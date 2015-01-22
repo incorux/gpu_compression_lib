@@ -6,7 +6,20 @@ typedef struct pavar_header
     unsigned int patch_bit_length;
 } pavar_header;
 
-__global__ void pavar_compress_gpu (pavar_header comp_h, int *data, int *compressed_data, unsigned long length);
+__global__ void pavar_compress_gpu (
+        pavar_header comp_h, 
+        int *data, 
+        int *compressed_data, 
+        unsigned long length,
+        
+        int *global_queue_patch_values,
+        int *global_queue_patch_index,
+        int *global_queue_patch_count,
+
+        int *global_data_patch_values,
+        int *global_data_patch_index,
+        int *global_data_patch_count
+        );
 
 __global__ void pavar_decompress_gpu (pavar_header comp_h, int *compressed_data, int * decompress_data, unsigned long length);
 
