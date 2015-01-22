@@ -1,11 +1,9 @@
 #ifndef _TOOLS
 #define _TOOLS true
 #include "tools.cuh"
+#include "macros.cuh"
 #include <stdio.h>
 #include <list>
-
-__device__ __host__ int bitLen(int a);
-__device__ __host__ int bitLen2(int a);
 
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
@@ -29,10 +27,11 @@ inline int pow(int val, int pow)
     return std::pow((double)val, pow);
 }
 
-inline void big_random_block( unsigned long size, int limit , int *data)
+inline void big_random_block( unsigned long size, int limit_bits, int *data)
 {
-    for (unsigned long i=0; i<size; i++)
-        data[i] = rand() % limit;
+    unsigned int mask = NBITSTOMASK(limit_bits);
+    for (unsigned long i = 0; i < size; i++)
+        data[i] = rand() & mask;
 }
 
 typedef struct allocation_info

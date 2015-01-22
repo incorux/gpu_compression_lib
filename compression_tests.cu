@@ -29,7 +29,7 @@ void avar_gpu_test(unsigned long max_size)
     mmCudaMalloc(manager, (void **) &dev_data, max_size * sizeof(int));
 
     for (unsigned int i = 2; i <= 31; ++i) {
-        big_random_block(max_size, pow((double)2,(double)(i-1))-1, host_data);
+        big_random_block(max_size, i, host_data);
 
         TIMEIT_START();
         gpuErrchk( cudaMemcpy(dev_data, host_data, max_size * sizeof(int), cudaMemcpyHostToDevice) );
@@ -85,7 +85,7 @@ void pavar_gpu_test(unsigned long max_size)
     mmCudaMalloc(manager, (void **) &dev_queue_patch_values, max_size * sizeof(int));
 
     for (unsigned int i = 2; i <= 31; ++i) {
-        big_random_block(max_size, pow((double)2,(double)(i-1))-1, host_data);
+        big_random_block(max_size, i, host_data);
 
         TIMEIT_START();
         gpuErrchk( cudaMemcpy(dev_data, host_data, max_size * sizeof(int), cudaMemcpyHostToDevice) );

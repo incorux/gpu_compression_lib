@@ -1,24 +1,4 @@
 #include "tools.cuh"
-__device__ __host__ int bitLen(int a)
-{
-    int l = 1;
-    while( (a = a>>1) ) l ++;
-    return l;
-}
-
-__host__ __device__
-int bitLen2( int v)
-{
-    register unsigned int r; // result of log2(v) will go here
-    register unsigned int shift;
-
-    r =     (v > 0xFFFF) << 4; v >>= r;
-    shift = (v > 0xFF  ) << 3; v >>= shift; r |= shift;
-    shift = (v > 0xF   ) << 2; v >>= shift; r |= shift;
-    shift = (v > 0x3   ) << 1; v >>= shift; r |= shift;
-    r |= (v >> 1);
-    return r+1;
-}
 
 void tiStart(tiManager &manager)
 {
