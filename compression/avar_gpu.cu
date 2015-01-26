@@ -42,12 +42,12 @@ __device__  void avar_compress_base_gpu (avar_header comp_h, unsigned long data_
 {
     int v1, value = 0;
     unsigned int v1_pos=0, v1_len;
-    unsigned long pos=comp_data_id, pos_decomp=data_id;
+    unsigned long pos=comp_data_id, pos_data=data_id;
 
-    for (unsigned int i = 0; i < WARP_SIZE && pos_decomp < length; ++i)
+    for (unsigned int i = 0; i < WARP_SIZE && pos_data < length; ++i)
     {
-        v1 = data[pos_decomp];
-        pos_decomp += WARP_SIZE;
+        v1 = data[pos_data];
+        pos_data += WARP_SIZE;
 
         if (v1_pos + comp_h.bit_length >= WORD_SIZE){
             v1_len = WORD_SIZE - v1_pos;
@@ -65,7 +65,7 @@ __device__  void avar_compress_base_gpu (avar_header comp_h, unsigned long data_
             v1_pos += v1_len;
         }
     }
-    if (pos_decomp >= length  && pos_decomp < length + WARP_SIZE)
+    if (pos_data >= length  && pos_data < length + WARP_SIZE)
     {
         compressed_data[pos] = value;
     }

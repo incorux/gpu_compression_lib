@@ -55,25 +55,34 @@ __global__ void pavar_compress_gpu (
             global_queue_patch_count
             );
 
-    __syncthreads();
+    __syncthreads(); // Wait for all PATCHED values to be stored in shared
+
+    // get outliers count from shared memory
+    int pcount = private_patch_count[0] ;
 
     // reserve space for outliers
-    if (threadIdx.x == 0) 
-        old_global_patch_count[0] = atomicAdd(global_queue_patch_count, private_patch_count[0]); 
+    if (threadIdx.x == 0) {
+        if(pcount > BQ_CAPACITY) pcount = BQ_CAPACITY;
+        old_global_patch_count[0] = atomicAdd(global_queue_patch_count, pcount);
+    }
 
     __syncthreads();
 
     // write in paralel outliers to global memory
     int gpos = old_global_patch_count[0]; // get global memory index
-    int pcount = private_patch_count[0]; // get outliers count from shared memory
 
+    // Transfer data from shared to global, warning if pcount > BQ_CAPACITY transfer only BQ_CAPACITY 
     for (int i = threadIdx.x; i < pcount; i += blockDim.x) {
         global_queue_patch_values[gpos + i] = private_patch_values[i];
         global_queue_patch_index[gpos + i] = private_patch_index[i];
     }
 
-    __syncthreads();
+    __syncthreads(); // Wait for all PATCHED values in global
+
+    // Reuse current threads for PATCH compression
     int patch_count = global_queue_patch_count[0];
+
+    /*printf("%d\n", patch_count);*/
 
     cdata_id = pos * comp_h.bit_length + warp_th; // reuse for PATCH compression
     
@@ -82,19 +91,18 @@ __global__ void pavar_compress_gpu (
     avar_compress_base_gpu(patch_header, data_id, cdata_id, global_queue_patch_values, global_data_patch_values, patch_count);
 
     //Compress index
-    patch_header.bit_length = 0; //TODO: policzyć względem rozmiaru danych 
+    patch_header.bit_length = 16; //TODO: policzyć względem rozmiaru danych
     avar_compress_base_gpu(patch_header, data_id, cdata_id, global_queue_patch_values, global_data_patch_index, patch_count);
-
 }
 
 __global__ void pavar_decompress_gpu (pavar_header comp_h, int *compressed_data, int * decompress_data, unsigned long length) //TODO: fix params list
 {
-    int warp_th = (threadIdx.x % WARP_SIZE);
-    unsigned long pos = blockIdx.x * blockDim.x + threadIdx.x - warp_th;
-    unsigned long data_id = pos * WARP_SIZE + warp_th;
-    unsigned long cdata_id = pos * comp_h.bit_length + warp_th;
+    /*int warp_th = (threadIdx.x % WARP_SIZE);*/
+    /*unsigned long pos = blockIdx.x * blockDim.x + threadIdx.x - warp_th;*/
+    /*unsigned long data_id = pos * WARP_SIZE + warp_th;*/
+    /*unsigned long cdata_id = pos * comp_h.bit_length + warp_th;*/
 
-    avar_header cheader = {comp_h.patch_bit_length};
+    /*avar_header cheader = {comp_h.patch_bit_length};*/
     /*avar_decompress_base_gpu(cheader, cdata_id, data_id, compressed_data, decompress_data, length);*/
 }
 
@@ -186,14 +194,15 @@ __device__  void pavar_compress_base_gpu (
         }
 
         // check if value is outlier, if so write it to shared memory (or global if shared is full)
-        if ( v1 & mask) { 
-            unsigned int p_pos = atomicAdd(private_patch_count, 1); 
+        if ( v1 & mask) {
+            unsigned int p_pos = atomicAdd(private_patch_count, 1);
             if (p_pos < BQ_CAPACITY) {
                 private_patch_values[p_pos] = v1;
                 private_patch_index[p_pos] = pos_decomp;
             } else {
                 // in case shared memory is full
-                p_pos = atomicAdd(global_patch_count, 1); 
+                p_pos = atomicAdd(global_patch_count, 1);
+
                 global_patch_values[p_pos] = v1;
                 global_patch_index[p_pos] = pos_decomp;
             }

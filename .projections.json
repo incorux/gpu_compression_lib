@@ -1,11 +1,11 @@
 {
     "*.cu": {
         "alternate": "{}.cuh",
-        "type": "source"
+        "type": "c"
     },
     "*.cuh": {
         "alternate": "{}.cu",
-        "type": "header"
+        "type": "h"
     },
     "*": {
         "rmake": "fab -H teslabot all:all",

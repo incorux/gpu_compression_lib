@@ -6,9 +6,11 @@
 #include <list>
 
 // Tools
-void big_random_block( unsigned long size, int limit_bits, int *data);
-int compare_arrays(int *in1, int *in2, unsigned long size);
-int compare_arrays_float(float *in1, float *in2, unsigned long size);
+void big_random_block               ( unsigned long size, int limit_bits, int *data);
+void big_random_block_with_outliers ( unsigned long size, int outlier_count, int limit_bits, int outlier_bits,  int *data);
+
+int compare_arrays       ( int *in1, int *in2, unsigned long size);
+int compare_arrays_float ( float *in1, float *in2, unsigned long size);
 
 // Errors and debug
 void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true);
@@ -36,10 +38,10 @@ typedef struct allocation_info
 
 typedef std::list<struct allocation_info> mmManager;
 
-void mmCudaMallocHost(mmManager &manager, void **data, unsigned long size);
-void mmCudaMalloc(mmManager &manager, void **data, unsigned long size);
-void mmCudaFreeAll(mmManager &manager);
-void mmCudaFree(mmManager &manager, void *ptr);
+void mmCudaMallocHost ( mmManager &manager, void **data, unsigned long size);
+void mmCudaMalloc     ( mmManager &manager, void **data, unsigned long size);
+void mmCudaFreeAll    ( mmManager &manager);
+void mmCudaFree       ( mmManager &manager, void *ptr);
 
 // Time measuring tools
 typedef struct timeit_info
@@ -52,11 +54,11 @@ typedef struct timeit_info
 
 typedef std::list<timeit_info *> tiManager;
 
-void tiStart(tiManager &manager);
-void tiEnd(tiManager &manager, const char * name);
-void tiPreatyPrint(tiManager &manager);
-void tiClear(tiManager &manager);
-void tiPreatyPrintThrougput(tiManager &manager, int data_size);
+void tiStart                ( tiManager &manager);
+void tiEnd                  ( tiManager &manager, const char * name);
+void tiPreatyPrint          ( tiManager &manager);
+void tiClear                ( tiManager &manager);
+void tiPreatyPrintThrougput ( tiManager &manager, int data_size);
 
 #define TIMEIT_SETUP() tiManager __tim__;
 #define TIMEIT_START() tiStart(__tim__);

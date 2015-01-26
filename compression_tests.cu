@@ -68,7 +68,9 @@ void pavar_gpu_test(unsigned long max_size)
     int *dev_out;
     int *dev_data;
     int *host_data, *host_data2;
-    int *dev_data_patch_index, *dev_data_patch_values, *dev_queue_patch_index, *dev_queue_patch_values;
+    int *dev_data_patch_index, *dev_data_patch_values, *dev_data_patch_count;
+    int *dev_queue_patch_index, *dev_queue_patch_values, *dev_queue_patch_count;
+    int outlier_count = 0.2 * max_size;
 
     mmManager manager;
     TIMEIT_SETUP();
@@ -79,25 +81,43 @@ void pavar_gpu_test(unsigned long max_size)
     mmCudaMalloc(manager, (void **) &dev_out, max_size * sizeof(int)); // maximal compression size
     mmCudaMalloc(manager, (void **) &dev_data, max_size * sizeof(int));
     
-    mmCudaMalloc(manager, (void **) &dev_data_patch_index, max_size * sizeof(int));
-    mmCudaMalloc(manager, (void **) &dev_data_patch_values, max_size * sizeof(int));
+    mmCudaMalloc(manager, (void **) &dev_data_patch_count, sizeof(int));
+    mmCudaMalloc(manager, (void **) &dev_data_patch_index, outlier_count * sizeof(int));
+    mmCudaMalloc(manager, (void **) &dev_data_patch_values, outlier_count * sizeof(int));
 
-    mmCudaMalloc(manager, (void **) &dev_queue_patch_index, max_size * sizeof(int));
-    mmCudaMalloc(manager, (void **) &dev_queue_patch_values, max_size * sizeof(int));
+    mmCudaMalloc(manager, (void **) &dev_queue_patch_count, sizeof(int));
+    mmCudaMalloc(manager, (void **) &dev_queue_patch_index, outlier_count * sizeof(int));
+    mmCudaMalloc(manager, (void **) &dev_queue_patch_values, outlier_count * sizeof(int));
 
     for (unsigned int i = 2; i <= 31; ++i) {
-        big_random_block(max_size, i, host_data);
+        big_random_block_with_outliers(max_size, outlier_count, i, i + 3, host_data);
 
         TIMEIT_START();
         gpuErrchk( cudaMemcpy(dev_data, host_data, max_size * sizeof(int), cudaMemcpyHostToDevice) );
         TIMEIT_END("M->G");
 
-        pavar_header comp_h = { i };
+        pavar_header comp_h = { i, 4 };
         cudaMemset(dev_out, 0, max_size * sizeof(int)); // Clean up before compression
+        cudaMemset(dev_data_patch_count, 0, sizeof(int)); // Clean up before compression
+        cudaMemset(dev_queue_patch_count, 0, sizeof(int)); // Clean up before compression
 
         TIMEIT_START();
         //TODO
-        /*run_pavar_compress_gpu(comp_h, dev_data, dev_out, max_size);*/
+        run_pavar_compress_gpu(
+                comp_h, 
+                dev_data, 
+                dev_out, 
+                max_size,
+                
+                dev_queue_patch_values, 
+                dev_queue_patch_index,
+                dev_queue_patch_count,
+
+                dev_data_patch_values,
+                dev_data_patch_index,
+                dev_data_patch_count
+                );
+
         TIMEIT_END("*comp");
         cudaErrorCheck();
 
@@ -109,14 +129,14 @@ void pavar_gpu_test(unsigned long max_size)
         TIMEIT_END("*decomp");
         cudaErrorCheck();
 
-        cudaMemset(host_data2, 0, max_size * sizeof(int)); 
+        /*cudaMemset(host_data2, 0, max_size * sizeof(int)); */
         TIMEIT_START();
-        gpuErrchk(cudaMemcpy(host_data2, dev_data, max_size * sizeof(int), cudaMemcpyDeviceToHost));
+        /*gpuErrchk(cudaMemcpy(host_data2, dev_data, max_size * sizeof(int), cudaMemcpyDeviceToHost));*/
         TIMEIT_END("G->M");
 
-        compare_arrays(host_data2, host_data, max_size);
+        /*compare_arrays(host_data2, host_data, max_size);*/
 
-        PPRINT_THROUGPUT(("GPU avar%d", i), max_size * sizeof(int));
+        PPRINT_THROUGPUT(("GPU pavar%d", i), max_size * sizeof(int));
     }
 
     mmCudaFreeAll(manager);
@@ -142,6 +162,7 @@ int main(int argc, char *argv[])
 
         printf("\nDevice %d: \"%s\"\n", dev, deviceProp.name);
         avar_gpu_test(max_size);
+        /*pavar_gpu_test(max_size);*/
     }
     return 0;
 }
