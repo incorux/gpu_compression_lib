@@ -18,46 +18,51 @@ void avar_gpu_test(unsigned long max_size)
     int *dev_data;
     int *host_data, *host_data2;
 
+    // for size less then 32 we actually will need more space than original data
+    int compressed_data_size = (max_size < 32 ? 32 : max_size) * sizeof(int); 
+
+    int data_size = max_size * sizeof(int); 
+
     mmManager manager;
 
     TIMEIT_SETUP();
 
-    mmCudaMallocHost(manager,(void**)&host_data, max_size * sizeof(int));
-    mmCudaMallocHost(manager,(void**)&host_data2, max_size * sizeof(int));
+    mmCudaMallocHost(manager, (void**)&host_data,  data_size);
+    mmCudaMallocHost(manager, (void**)&host_data2, data_size);
 
-    mmCudaMalloc(manager, (void **) &dev_out, max_size * sizeof(int)); // maximal compression size
-    mmCudaMalloc(manager, (void **) &dev_data, max_size * sizeof(int));
+    mmCudaMalloc(manager, (void **) &dev_out, compressed_data_size); 
+    mmCudaMalloc(manager, (void **) &dev_data, data_size);
 
     for (unsigned int i = 2; i <= 31; ++i) {
         big_random_block(max_size, i, host_data);
 
         TIMEIT_START();
-        gpuErrchk( cudaMemcpy(dev_data, host_data, max_size * sizeof(int), cudaMemcpyHostToDevice) );
+        gpuErrchk( cudaMemcpy(dev_data, host_data, data_size, cudaMemcpyHostToDevice) );
         TIMEIT_END("M->G");
 
         avar_header comp_h = { i };
-        cudaMemset(dev_out, 0, max_size * sizeof(int)); // Clean up before compression
+        cudaMemset(dev_out, 0, compressed_data_size); // Clean up before compression
 
         TIMEIT_START();
         run_avar_compress_gpu(comp_h, dev_data, dev_out, max_size);
         TIMEIT_END("*comp");
         cudaErrorCheck();
 
-        cudaMemset(dev_data, 0, max_size * sizeof(int)); // Clean up before decompression
+        cudaMemset(dev_data, 0, data_size); // Clean up before decompression
 
         TIMEIT_START();
         run_avar_decompress_gpu(comp_h, dev_out, dev_data, max_size);
         TIMEIT_END("*decomp");
         cudaErrorCheck();
 
-        cudaMemset(host_data2, 0, max_size * sizeof(int)); 
+        cudaMemset(host_data2, 0, data_size); 
         TIMEIT_START();
-        gpuErrchk(cudaMemcpy(host_data2, dev_data, max_size * sizeof(int), cudaMemcpyDeviceToHost));
+        gpuErrchk(cudaMemcpy(host_data2, dev_data, data_size, cudaMemcpyDeviceToHost));
         TIMEIT_END("G->M");
 
         compare_arrays(host_data2, host_data, max_size);
 
-        PPRINT_THROUGPUT(("GPU avar%d", i), max_size * sizeof(int));
+        PPRINT_THROUGPUT(("GPU avar%d", i), data_size);
     }
 
     mmCudaFreeAll(manager);

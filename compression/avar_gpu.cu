@@ -77,6 +77,8 @@ __device__ void avar_decompress_base_gpu (avar_header comp_h, unsigned long comp
     unsigned int v1_pos=0, v1_len;
     int v1, ret;
 
+    if (pos_decomp > length )
+        return;
     v1 = compressed_data[pos];
     for (unsigned int i = 0; i < WARP_SIZE && pos_decomp < length; ++i)
     {
