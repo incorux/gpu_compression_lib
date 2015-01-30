@@ -23,7 +23,6 @@ __global__ void avar_decompress_gpu (avar_header comp_h, int *compressed_data, i
     avar_decompress_base_gpu(comp_h, cdata_id, data_id, compressed_data, decompress_data, length);
 }
 
-
 __host__ void run_avar_compress_gpu(avar_header comp_h, int *data, int *compressed_data, unsigned long length)
 {
     int block_size = WARP_SIZE * 8; // better occupancy 
@@ -77,7 +76,7 @@ __device__ void avar_decompress_base_gpu (avar_header comp_h, unsigned long comp
     unsigned int v1_pos=0, v1_len;
     int v1, ret;
 
-    if (pos_decomp > length )
+    if (pos_decomp > length ) // Decompress not more elements then length
         return;
     v1 = compressed_data[pos];
     for (unsigned int i = 0; i < WARP_SIZE && pos_decomp < length; ++i)

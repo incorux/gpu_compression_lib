@@ -38,7 +38,8 @@ void big_random_block( unsigned long size, int limit_bits, int *data)
 void big_random_block_with_outliers( unsigned long size, int outlier_count, int limit_bits, int outlier_bits,  int *data) 
 {
     big_random_block(size, limit_bits, data);
-    unsigned int mask = NBITSTOMASK(outlier_bits);
+    unsigned int mask = ~NBITSTOMASK(outlier_bits);
+
     for (int i = 0; i < outlier_count; ++i)
         data[xorshf96() % size] = xorshf96() & mask;
 }

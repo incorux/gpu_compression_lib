@@ -62,16 +62,15 @@ __global__ void pavar_compress_gpu (
 
     // reserve space for outliers
     if (threadIdx.x == 0) {
-        if(pcount > BQ_CAPACITY) pcount = BQ_CAPACITY;
+        if(pcount > BQ_CAPACITY) pcount = BQ_CAPACITY;   //warning if pcount > BQ_CAPACITY transfer only BQ_CAPACITY 
         old_global_patch_count[0] = atomicAdd(global_queue_patch_count, pcount);
     }
 
     __syncthreads();
 
-    // write in paralel outliers to global memory
     int gpos = old_global_patch_count[0]; // get global memory index
 
-    // Transfer data from shared to global, warning if pcount > BQ_CAPACITY transfer only BQ_CAPACITY 
+    // Transfer data from shared to global, write in paralel outliers to global memory
     for (int i = threadIdx.x; i < pcount; i += blockDim.x) {
         global_queue_patch_values[gpos + i] = private_patch_values[i];
         global_queue_patch_index[gpos + i] = private_patch_index[i];
@@ -81,21 +80,28 @@ __global__ void pavar_compress_gpu (
 
     // Reuse current threads for PATCH compression
     int patch_count = global_queue_patch_count[0];
-
-    /*printf("%d\n", patch_count);*/
-
-    cdata_id = pos * comp_h.bit_length + warp_th; // reuse for PATCH compression
     
     //Compress values
     avar_header patch_header = {comp_h.patch_bit_length};
+    cdata_id = pos * patch_header.bit_length + warp_th; // reuse for PATCH compression
     avar_compress_base_gpu(patch_header, data_id, cdata_id, global_queue_patch_values, global_data_patch_values, patch_count);
 
     //Compress index
     patch_header.bit_length = 16; //TODO: policzyć względem rozmiaru danych
+    cdata_id = pos * patch_header.bit_length + warp_th; // reuse for PATCH compression
     avar_compress_base_gpu(patch_header, data_id, cdata_id, global_queue_patch_values, global_data_patch_index, patch_count);
 }
 
-__global__ void pavar_decompress_gpu (pavar_header comp_h, int *compressed_data, int * decompress_data, unsigned long length) //TODO: fix params list
+__global__ void patch_apply_gpu (
+        pavar_header comp_h
+        int *compressed_data
+        int * decompress_data
+        unsigned long length,
+        
+        int *global_data_patch_values,
+        int *global_data_patch_index,
+        int *global_data_patch_count
+        ) //TODO: fix params list
 {
     /*int warp_th = (threadIdx.x % WARP_SIZE);*/
     /*unsigned long pos = blockIdx.x * blockDim.x + threadIdx.x - warp_th;*/
@@ -142,9 +148,10 @@ __host__ void run_pavar_compress_gpu(
 
 __host__ void run_pavar_decompress_gpu(pavar_header comp_h, int *compressed_data, int *data, unsigned long length)
 {
-    /*int block_size = WARP_SIZE * 8; // better occupancy*/
-    /*unsigned long block_number = (length + block_size * WARP_SIZE - 1) / (block_size * WARP_SIZE);*/
-    /*avar_decompress_gpu <<<block_number, block_size>>> (comp_h, compressed_data, data, length);*/
+    int block_size = WARP_SIZE * 8; // better occupancy
+    unsigned long block_number = (length + block_size * WARP_SIZE - 1) / (block_size * WARP_SIZE);
+    avar_header comp_a = {comp_h.bit_length};
+    avar_decompress_gpu <<<block_number, block_size>>> (comp_a, compressed_data, data, length);
     //TODO: nalozenie PATCH
 }
 
@@ -170,7 +177,7 @@ __device__  void pavar_compress_base_gpu (
     int v1, value = 0;
     unsigned int v1_pos=0, v1_len;
     unsigned long pos=comp_data_id, pos_decomp=data_id;
-    unsigned int mask = NBITSTOMASK(comp_h.patch_bit_length);
+    unsigned int mask = ~NBITSTOMASK(comp_h.bit_length + comp_h.patch_bit_length);
 
     for (unsigned int i = 0; i < WARP_SIZE && pos_decomp < length; ++i)
     {

@@ -6,6 +6,14 @@
 #include <stdio.h>
 #include <math.h>
 
+
+/*
+TODO:
+  * random access decompress
+  * patch decompress
+  * type template
+   */
+
 #define PPRINT(name) printf("%c[1;34m",27);  printf name; printf("%c[30m Status: %c[1;32mCORRECT%c[37m ", 27,27,27); TIMEIT_PRINT();
 /*#define PPRINT(name) printf("%c[1;34m",27);  printf name; printf("%c[30m Status: %c[1;32mOK%c[37m \n", 27,27,27);*/
 #define PPRINT_MANY(name) printf("%c[1;34m",27);  printf name; printf("%c[30m: %c[1;32mOK%c[37m ", 27,27,27);
@@ -95,13 +103,13 @@ void pavar_gpu_test(unsigned long max_size)
     mmCudaMalloc(manager, (void **) &dev_queue_patch_values, outlier_count * sizeof(int));
 
     for (unsigned int i = 2; i <= 31; ++i) {
-        big_random_block_with_outliers(max_size, outlier_count, i, i + 3, host_data);
+        big_random_block_with_outliers(max_size, outlier_count, i, i + 1, host_data);
 
         TIMEIT_START();
         gpuErrchk( cudaMemcpy(dev_data, host_data, max_size * sizeof(int), cudaMemcpyHostToDevice) );
         TIMEIT_END("M->G");
 
-        pavar_header comp_h = { i, 4 };
+        pavar_header comp_h = { i, 1 };
         cudaMemset(dev_out, 0, max_size * sizeof(int)); // Clean up before compression
         cudaMemset(dev_data_patch_count, 0, sizeof(int)); // Clean up before compression
         cudaMemset(dev_queue_patch_count, 0, sizeof(int)); // Clean up before compression
@@ -129,17 +137,16 @@ void pavar_gpu_test(unsigned long max_size)
         cudaMemset(dev_data, 0, max_size * sizeof(int)); // Clean up before decompression
 
         TIMEIT_START();
-        //TODO
-        /*run_pavar_decompress_gpu(comp_h, dev_out, dev_data, max_size);*/
+        run_pavar_decompress_gpu(comp_h, dev_out, dev_data, max_size);
         TIMEIT_END("*decomp");
         cudaErrorCheck();
 
-        /*cudaMemset(host_data2, 0, max_size * sizeof(int)); */
+        cudaMemset(host_data2, 0, max_size * sizeof(int));
         TIMEIT_START();
-        /*gpuErrchk(cudaMemcpy(host_data2, dev_data, max_size * sizeof(int), cudaMemcpyDeviceToHost));*/
+        gpuErrchk(cudaMemcpy(host_data2, dev_data, max_size * sizeof(int), cudaMemcpyDeviceToHost));
         TIMEIT_END("G->M");
 
-        /*compare_arrays(host_data2, host_data, max_size);*/
+        compare_arrays(host_data2, host_data, max_size);
 
         PPRINT_THROUGPUT(("GPU pavar%d", i), max_size * sizeof(int));
     }
@@ -167,7 +174,7 @@ int main(int argc, char *argv[])
 
         printf("\nDevice %d: \"%s\"\n", dev, deviceProp.name);
         avar_gpu_test(max_size);
-        /*pavar_gpu_test(max_size);*/
+        pavar_gpu_test(max_size);
     }
     return 0;
 }
