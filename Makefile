@@ -1,8 +1,9 @@
 NVCC=nvcc
 
 NVCCLIBSFLAGS = -dc 
-NVCCFLAGS    = -gencode arch=compute_20,code=sm_20 -gencode arch=compute_30,code=sm_30 -gencode arch=compute_35,code=sm_35
-NVCCFLAGS    += --compiler-options=-Wall,-Wno-unused-function -I$(CURDIR) -Ithrust -O3 
+#NVCCFLAGS    = -gencode arch=compute_20,code=sm_20 -gencode arch=compute_30,code=sm_30 -gencode arch=compute_35,code=sm_35
+NVCCFLAGS    = -gencode arch=compute_20,code=sm_20 -gencode arch=compute_35,code=sm_35
+NVCCFLAGS    += --compiler-options=-Wall,-Wno-unused-function -I$(CURDIR) -O3
 
 
 COMPRESSION_LIB_OBJ_BASE=
@@ -17,7 +18,7 @@ PROGS = multi_gpu_transfer.out compression_tests.out
 
 all:$(PROGS) 
 
-debug: NVCCFLAGS += -g -G -DTHRUST_DEBUG
+debug: NVCCFLAGS += -g -G 
 debug: ctags $(PROGS) 
 
 verbose: NVCCFLAGS += -Xptxas="-v"

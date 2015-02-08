@@ -13,4 +13,10 @@ __device__ void avar_decompress_base_gpu ( avar_header comp_h,  unsigned long co
 
 __host__ void run_avar_decompress_gpu    ( avar_header comp_h,  int *data,                   int *compressed_data,        unsigned long length);
 __host__ void run_avar_compress_gpu      ( avar_header comp_h,  int *compressed_data,        int *decompressed_data,      unsigned long length);
+
+__device__ int avar_decompress_base_value_gpu (avar_header comp_h, int *compressed_data, unsigned long pos);
+
+__global__ void avar_decompress_value_gpu (avar_header comp_h, int *compressed_data, int * decompress_data, unsigned long length);
+
+__host__ void run_avar_decompress_value_gpu(avar_header comp_h, int *compressed_data, int *data, unsigned long length);
 #endif

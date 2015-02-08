@@ -19,7 +19,7 @@ void _cudaErrorCheck(const char *file, int line);
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 #define cudaErrorCheck()  { _cudaErrorCheck(__FILE__, __LINE__); }
 
-#define DEBUG 1
+#define DEBUG 0
 
 #ifdef DEBUG
 # define DPRINT(x) printf x

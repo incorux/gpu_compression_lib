@@ -44,9 +44,33 @@ __device__ void pavar_compress_base_gpu (
 
 __device__ void pavar_decompress_base_gpu (pavar_header comp_h, unsigned long comp_data_id, unsigned long data_id, int *compressed_data, int *data, unsigned long length);
 
-__host__ void run_pavar_decompress_gpu(pavar_header comp_h, int *data, int *compressed_data, unsigned long length);
+__host__ void run_pavar_decompress_gpu(
+        pavar_header comp_h, 
+        int *compressed_data, 
+        int *data, 
+        unsigned long length,
+        
+        int *global_data_patch_values,
+        int *global_data_patch_index,
+        int *global_data_patch_count
+        );
 
 __host__ void run_pavar_compress_gpu(
+        pavar_header comp_h, 
+        int *data, 
+        int *compressed_data, 
+        unsigned long length,
+        
+        int *global_queue_patch_values,
+        int *global_queue_patch_index,
+        int *global_queue_patch_count,
+
+        int *global_data_patch_values,
+        int *global_data_patch_index,
+        int *global_data_patch_count
+        );
+
+__host__ void run_pavar_compress_gpu_alternate(
         pavar_header comp_h, 
         int *data, 
         int *compressed_data, 
