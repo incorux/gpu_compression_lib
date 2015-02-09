@@ -51,14 +51,14 @@ void afl_gpu_test(unsigned long max_size)
         cudaMemset(dev_out, 0, compressed_data_size); // Clean up before compression
 
         TIMEIT_START();
-        run_afl_compress_gpu(i, dev_data, dev_out, max_size);
+        run_afl_compress_gpu <int, 32, 32> (i, dev_data, dev_out, max_size);
         TIMEIT_END("*comp");
         cudaErrorCheck();
 
         cudaMemset(dev_data, 0, data_size); // Clean up before decompression
 
         TIMEIT_START();
-        run_afl_decompress_gpu(i, dev_out, dev_data, max_size);
+        run_afl_decompress_gpu <int, 32, 32> (i, dev_out, dev_data, max_size);
         TIMEIT_END("*decomp");
         cudaErrorCheck();
 
@@ -106,14 +106,14 @@ void afl_gpu_value_test(unsigned long max_size)
         cudaMemset(dev_out, 0, compressed_data_size); // Clean up before compression
 
         TIMEIT_START();
-        run_afl_compress_gpu(i, dev_data, dev_out, max_size);
+        run_afl_compress_gpu < int, 32, 32 > (i, dev_data, dev_out, max_size);
         TIMEIT_END("*comp");
         cudaErrorCheck();
 
         cudaMemset(dev_data, 0, data_size); // Clean up before decompression
 
         TIMEIT_START();
-        run_afl_decompress_value_gpu(i, dev_out, dev_data, max_size);
+        run_afl_decompress_value_gpu <int, 32, 32> (i, dev_out, dev_data, max_size);
         TIMEIT_END("*decomp");
         cudaErrorCheck();
 
