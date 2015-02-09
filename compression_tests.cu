@@ -48,18 +48,17 @@ void avar_gpu_test(unsigned long max_size)
         gpuErrchk( cudaMemcpy(dev_data, host_data, data_size, cudaMemcpyHostToDevice) );
         TIMEIT_END("M->G");
 
-        avar_header comp_h = { i };
         cudaMemset(dev_out, 0, compressed_data_size); // Clean up before compression
 
         TIMEIT_START();
-        run_avar_compress_gpu(comp_h, dev_data, dev_out, max_size);
+        run_avar_compress_gpu(i, dev_data, dev_out, max_size);
         TIMEIT_END("*comp");
         cudaErrorCheck();
 
         cudaMemset(dev_data, 0, data_size); // Clean up before decompression
 
         TIMEIT_START();
-        run_avar_decompress_gpu(comp_h, dev_out, dev_data, max_size);
+        run_avar_decompress_gpu(i, dev_out, dev_data, max_size);
         TIMEIT_END("*decomp");
         cudaErrorCheck();
 
@@ -104,18 +103,17 @@ void avar_gpu_value_test(unsigned long max_size)
         gpuErrchk( cudaMemcpy(dev_data, host_data, data_size, cudaMemcpyHostToDevice) );
         TIMEIT_END("M->G");
 
-        avar_header comp_h = { i };
         cudaMemset(dev_out, 0, compressed_data_size); // Clean up before compression
 
         TIMEIT_START();
-        run_avar_compress_gpu(comp_h, dev_data, dev_out, max_size);
+        run_avar_compress_gpu(i, dev_data, dev_out, max_size);
         TIMEIT_END("*comp");
         cudaErrorCheck();
 
         cudaMemset(dev_data, 0, data_size); // Clean up before decompression
 
         TIMEIT_START();
-        run_avar_decompress_value_gpu(comp_h, dev_out, dev_data, max_size);
+        run_avar_decompress_value_gpu(i, dev_out, dev_data, max_size);
         TIMEIT_END("*decomp");
         cudaErrorCheck();
 
@@ -254,8 +252,8 @@ int main(int argc, char *argv[])
         cudaGetDeviceProperties(&deviceProp, dev);
 
         printf("\nDevice %d: \"%s\"\n", dev, deviceProp.name);
-        /*avar_gpu_test(max_size);*/
-        /*avar_gpu_value_test(max_size);*/
+        avar_gpu_test(max_size);
+        avar_gpu_value_test(max_size);
         pavar_gpu_test(max_size);
     }
     return 0;

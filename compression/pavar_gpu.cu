@@ -220,15 +220,15 @@ __global__ void pavar_compress_gpu (
     // Reuse current threads for PATCH compression
     int patch_count = global_queue_patch_count[0];
     
+    int patch_values_bit_length = comp_h.patch_bit_length;
     //Compress values
-    avar_header patch_header = {comp_h.patch_bit_length};
-    cdata_id = pos * patch_header.bit_length + warp_th; // reuse for PATCH compression
-    avar_compress_base_gpu(patch_header, data_id, cdata_id, global_queue_patch_values, global_data_patch_values, patch_count);
+    cdata_id = pos * patch_values_bit_length + warp_th; // reuse for PATCH compression
+    avar_compress_base_gpu(patch_values_bit_length, data_id, cdata_id, global_queue_patch_values, global_data_patch_values, patch_count);
 
+    int patch_index_bit_length = BITLEN(length);
     //Compress index
-    patch_header.bit_length = BITLEN(length); 
-    cdata_id = pos * patch_header.bit_length + warp_th; // reuse for PATCH compression
-    avar_compress_base_gpu(patch_header, data_id, cdata_id, global_queue_patch_values, global_data_patch_index, patch_count);
+    cdata_id = pos * patch_index_bit_length + warp_th; // reuse for PATCH compression
+    avar_compress_base_gpu(patch_index_bit_length, data_id, cdata_id, global_queue_patch_values, global_data_patch_index, patch_count);
 }
 
 __global__ void patch_apply_gpu (
@@ -248,12 +248,10 @@ __global__ void patch_apply_gpu (
     //TODO: Run decompression on selected starting threads
     if (tid < patch_length)
     {
-        avar_header cheader = {(int)log2((float)length)+1};
-        int idx = avar_decompress_base_value_gpu(cheader, global_data_patch_index, tid);
+        int idx = avar_decompress_base_value_gpu((int)log2((float)length)+1, global_data_patch_index, tid);
         //TODO: tu chyba jest blad
 
-        cheader.bit_length = comp_h.patch_bit_length;
-        int val = avar_decompress_base_value_gpu(cheader, global_data_patch_values, tid);
+        int val = avar_decompress_base_value_gpu(comp_h.patch_bit_length, global_data_patch_values, tid);
         /*printf("DIDX %d\n", idx);*/
 
         decompressed_data[idx] |= (val << comp_h.bit_length); //TODO: check if idx <length ??
@@ -295,8 +293,7 @@ __host__ void run_pavar_compress_gpu_alternate(
     block_size = WARP_SIZE * 8; // better occupancy 
     block_number = (length + block_size * WARP_SIZE - 1) / (block_size * WARP_SIZE);
 
-    avar_header comp_a = {comp_h.bit_length};
-    avar_compress_gpu <<<block_number, block_size>>> (comp_a, data, compressed_data, length);
+    avar_compress_gpu <<<block_number, block_size>>> (comp_h.bit_length, data, compressed_data, length);
 
     //Patch compress
     int patch_count;
@@ -306,11 +303,9 @@ __host__ void run_pavar_compress_gpu_alternate(
         block_size = WARP_SIZE * 8; // better occupancy 
         block_number = (patch_count + block_size * WARP_SIZE - 1) / (block_size * WARP_SIZE);
 
-        comp_a.bit_length = comp_h.patch_bit_length;
-        avar_compress_gpu <<<block_number, block_size>>> (comp_a, global_queue_patch_values, global_data_patch_values, patch_count);
+        avar_compress_gpu <<<block_number, block_size>>> (comp_h.patch_bit_length, global_queue_patch_values, global_data_patch_values, patch_count);
 
-        comp_a.bit_length = (int)log2((float)length)+1;
-        avar_compress_gpu <<<block_number, block_size>>> (comp_a, global_queue_patch_index, global_data_patch_index, patch_count);
+        avar_compress_gpu <<<block_number, block_size>>> ((int)log2((float)length)+1, global_queue_patch_index, global_data_patch_index, patch_count);
     }
 }
 
@@ -361,8 +356,7 @@ __host__ void run_pavar_decompress_gpu(
 {
     int block_size = WARP_SIZE * 8; // better occupancy
     unsigned long block_number = (length + block_size * WARP_SIZE - 1) / (block_size * WARP_SIZE);
-    avar_header comp_a = {comp_h.bit_length};
-    avar_decompress_gpu <<<block_number, block_size>>> (comp_a, compressed_data, data, length);
+    avar_decompress_gpu <<<block_number, block_size>>> (comp_h.bit_length, compressed_data, data, length);
 
     /*cudaErrorCheck();*/
     patch_apply_gpu <<<block_number * WARP_SIZE, block_size>>> (

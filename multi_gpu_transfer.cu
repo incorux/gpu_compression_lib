@@ -33,12 +33,11 @@ void multi_gpu_compress(unsigned long max_size, unsigned int bit_length, bool di
     mmCudaMalloc(manager, (void **) &dev1_comp_out, comp_size);
 
     gpuErrchk(cudaSetDevice(gpuid_0));
-    avar_header comp_h = { bit_length } ;
 
     TIMEIT_SETUP();
 
     TIMEIT_START();
-    run_avar_compress_gpu(comp_h, dev0_data, dev0_comp_out, max_size);
+    run_avar_compress_gpu(bit_length, dev0_data, dev0_comp_out, max_size);
     cudaErrorCheck();
     TIMEIT_END("*C");
 
@@ -55,7 +54,7 @@ void multi_gpu_compress(unsigned long max_size, unsigned int bit_length, bool di
     }
 
     TIMEIT_START();
-    run_avar_decompress_gpu(comp_h, dev_data_source, dev1_data, max_size);
+    run_avar_decompress_gpu(bit_length, dev_data_source, dev1_data, max_size);
     cudaErrorCheck();
     TIMEIT_END("*D");
 
