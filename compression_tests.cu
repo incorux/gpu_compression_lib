@@ -1,6 +1,6 @@
 #include "compression/tools.cuh"
-#include "compression/avar_gpu.cuh"
-#include "compression/pavar_gpu.cuh"
+#include "compression/afl_gpu.cuh"
+#include "compression/pafl_gpu.cuh"
 
 #include <cuda.h>
 #include <stdio.h>
@@ -20,7 +20,7 @@ TODO:
 
 #define PPRINT_THROUGPUT(name, data_size) printf("%c[1;34m",27);  printf name; printf("%c[30m, %c[1;32mOK%c[37m, ", 27,27,27); TIMEIT_PRINT_THROUGPUT(data_size);
 
-void avar_gpu_test(unsigned long max_size)
+void afl_gpu_test(unsigned long max_size)
 {
     int *dev_out;
     int *dev_data;
@@ -51,14 +51,14 @@ void avar_gpu_test(unsigned long max_size)
         cudaMemset(dev_out, 0, compressed_data_size); // Clean up before compression
 
         TIMEIT_START();
-        run_avar_compress_gpu(i, dev_data, dev_out, max_size);
+        run_afl_compress_gpu(i, dev_data, dev_out, max_size);
         TIMEIT_END("*comp");
         cudaErrorCheck();
 
         cudaMemset(dev_data, 0, data_size); // Clean up before decompression
 
         TIMEIT_START();
-        run_avar_decompress_gpu(i, dev_out, dev_data, max_size);
+        run_afl_decompress_gpu(i, dev_out, dev_data, max_size);
         TIMEIT_END("*decomp");
         cudaErrorCheck();
 
@@ -69,13 +69,13 @@ void avar_gpu_test(unsigned long max_size)
 
         compare_arrays(host_data2, host_data, max_size);
 
-        PPRINT_THROUGPUT(("GPU avar%d", i), data_size);
+        PPRINT_THROUGPUT(("GPU afl%d", i), data_size);
     }
 
     mmCudaFreeAll(manager);
 }
 
-void avar_gpu_value_test(unsigned long max_size)
+void afl_gpu_value_test(unsigned long max_size)
 {
     int *dev_out;
     int *dev_data;
@@ -106,14 +106,14 @@ void avar_gpu_value_test(unsigned long max_size)
         cudaMemset(dev_out, 0, compressed_data_size); // Clean up before compression
 
         TIMEIT_START();
-        run_avar_compress_gpu(i, dev_data, dev_out, max_size);
+        run_afl_compress_gpu(i, dev_data, dev_out, max_size);
         TIMEIT_END("*comp");
         cudaErrorCheck();
 
         cudaMemset(dev_data, 0, data_size); // Clean up before decompression
 
         TIMEIT_START();
-        run_avar_decompress_value_gpu(i, dev_out, dev_data, max_size);
+        run_afl_decompress_value_gpu(i, dev_out, dev_data, max_size);
         TIMEIT_END("*decomp");
         cudaErrorCheck();
 
@@ -124,13 +124,13 @@ void avar_gpu_value_test(unsigned long max_size)
 
         compare_arrays(host_data2, host_data, max_size);
 
-        PPRINT_THROUGPUT(("GPU avar%d", i), data_size);
+        PPRINT_THROUGPUT(("GPU afl%d", i), data_size);
     }
 
     mmCudaFreeAll(manager);
 }
 
-void pavar_gpu_test(unsigned long max_size)
+void pafl_gpu_test(unsigned long max_size)
 {
     int *dev_out;
     int *dev_data;
@@ -163,14 +163,14 @@ void pavar_gpu_test(unsigned long max_size)
         gpuErrchk( cudaMemcpy(dev_data, host_data, max_size * sizeof(int), cudaMemcpyHostToDevice) );
         TIMEIT_END("M->G");
 
-        pavar_header comp_h = { i, 3 };
+        pafl_header comp_h = { i, 3 };
         cudaMemset(dev_out, 0, max_size * sizeof(int)); // Clean up before compression
         cudaMemset(dev_data_patch_count, 0, sizeof(int)); // Clean up before compression
         cudaMemset(dev_queue_patch_count, 0, sizeof(int)); // Clean up before compression
 
         TIMEIT_START();
         //TODO
-        run_pavar_compress_gpu_alternate(
+        run_pafl_compress_gpu_alternate(
                 comp_h,
                 dev_data,
                 dev_out,
@@ -185,7 +185,7 @@ void pavar_gpu_test(unsigned long max_size)
                 dev_data_patch_count
                 );
 
-        /*run_pavar_compress_gpu(*/
+        /*run_pafl_compress_gpu(*/
                 /*comp_h,*/
                 /*dev_data,*/
                 /*dev_out,*/
@@ -206,7 +206,7 @@ void pavar_gpu_test(unsigned long max_size)
         cudaMemset(dev_data, 0, max_size * sizeof(int)); // Clean up before decompression
 
         TIMEIT_START();
-        run_pavar_decompress_gpu(
+        run_pafl_decompress_gpu(
                 comp_h, 
                 dev_out, 
                 dev_data, 
@@ -227,7 +227,7 @@ void pavar_gpu_test(unsigned long max_size)
 
         compare_arrays(host_data2, host_data, max_size);
 
-        PPRINT_THROUGPUT(("GPU pavar%d", i), max_size * sizeof(int));
+        PPRINT_THROUGPUT(("GPU pafl%d", i), max_size * sizeof(int));
     }
 
     mmCudaFreeAll(manager);
@@ -252,9 +252,9 @@ int main(int argc, char *argv[])
         cudaGetDeviceProperties(&deviceProp, dev);
 
         printf("\nDevice %d: \"%s\"\n", dev, deviceProp.name);
-        avar_gpu_test(max_size);
-        avar_gpu_value_test(max_size);
-        pavar_gpu_test(max_size);
+        afl_gpu_test(max_size);
+        afl_gpu_value_test(max_size);
+        pafl_gpu_test(max_size);
     }
     return 0;
 }

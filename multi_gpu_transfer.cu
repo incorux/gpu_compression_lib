@@ -1,5 +1,5 @@
 #include "compression/tools.cuh"
-#include "compression/avar_gpu.cuh"
+#include "compression/afl_gpu.cuh"
 #include <cuda.h>
 #include <stdio.h>
 #include <math.h>
@@ -37,7 +37,7 @@ void multi_gpu_compress(unsigned long max_size, unsigned int bit_length, bool di
     TIMEIT_SETUP();
 
     TIMEIT_START();
-    run_avar_compress_gpu(bit_length, dev0_data, dev0_comp_out, max_size);
+    run_afl_compress_gpu(bit_length, dev0_data, dev0_comp_out, max_size);
     cudaErrorCheck();
     TIMEIT_END("*C");
 
@@ -54,7 +54,7 @@ void multi_gpu_compress(unsigned long max_size, unsigned int bit_length, bool di
     }
 
     TIMEIT_START();
-    run_avar_decompress_gpu(bit_length, dev_data_source, dev1_data, max_size);
+    run_afl_decompress_gpu(bit_length, dev_data_source, dev1_data, max_size);
     cudaErrorCheck();
     TIMEIT_END("*D");
 
@@ -66,7 +66,7 @@ void multi_gpu_compress(unsigned long max_size, unsigned int bit_length, bool di
     cudaErrorCheck();
     TIMEIT_END("saxpy");
     
-    PPRINT_THROUGPUT(("MGPU%s compr avar%d", direct_copy ? "copy":"access", bit_length), max_size * sizeof(int));
+    PPRINT_THROUGPUT(("MGPU%s compr afl%d", direct_copy ? "copy":"access", bit_length), max_size * sizeof(int));
 
     mmCudaFreeAll(manager);
 }

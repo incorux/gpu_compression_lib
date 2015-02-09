@@ -1,5 +1,5 @@
-#include "pavar_gpu.cuh"
-#include "avar_gpu.cuh"
+#include "pafl_gpu.cuh"
+#include "afl_gpu.cuh"
 #include "macros.cuh"
 #include "tools.cuh"
 #include <math.h>
@@ -11,8 +11,8 @@
 #define BQ_CAPACITY 1800 // TODO: FINE TUNE
 #define BQ_CAPACITY_ALTERNATE 512 // TODO: FINE TUNE
 
-__global__ void pavar_compress_gpu_alternate2 (
-        pavar_header comp_h, 
+__global__ void pafl_compress_gpu_alternate2 (
+        pafl_header comp_h, 
         int *data, 
         int *compressed_data, 
         unsigned long length,
@@ -86,8 +86,8 @@ __global__ void pavar_compress_gpu_alternate2 (
 
 }
 
-__global__ void pavar_compress_gpu_alternate (
-        pavar_header comp_h, 
+__global__ void pafl_compress_gpu_alternate (
+        pafl_header comp_h, 
         int *data, 
         int *compressed_data, 
         unsigned long length,
@@ -142,8 +142,8 @@ __global__ void pavar_compress_gpu_alternate (
     }
 }
 
-__global__ void pavar_compress_gpu (
-        pavar_header comp_h, 
+__global__ void pafl_compress_gpu (
+        pafl_header comp_h, 
         int *data, 
         int *compressed_data, 
         unsigned long length,
@@ -173,7 +173,7 @@ __global__ void pavar_compress_gpu (
 
     __syncthreads();
 
-    pavar_compress_base_gpu(
+    pafl_compress_base_gpu(
             comp_h, 
             data_id, 
             cdata_id, 
@@ -223,16 +223,16 @@ __global__ void pavar_compress_gpu (
     int patch_values_bit_length = comp_h.patch_bit_length;
     //Compress values
     cdata_id = pos * patch_values_bit_length + warp_th; // reuse for PATCH compression
-    avar_compress_base_gpu(patch_values_bit_length, data_id, cdata_id, global_queue_patch_values, global_data_patch_values, patch_count);
+    afl_compress_base_gpu(patch_values_bit_length, data_id, cdata_id, global_queue_patch_values, global_data_patch_values, patch_count);
 
     int patch_index_bit_length = BITLEN(length);
     //Compress index
     cdata_id = pos * patch_index_bit_length + warp_th; // reuse for PATCH compression
-    avar_compress_base_gpu(patch_index_bit_length, data_id, cdata_id, global_queue_patch_values, global_data_patch_index, patch_count);
+    afl_compress_base_gpu(patch_index_bit_length, data_id, cdata_id, global_queue_patch_values, global_data_patch_index, patch_count);
 }
 
 __global__ void patch_apply_gpu (
-        pavar_header comp_h,
+        pafl_header comp_h,
         int *decompressed_data,
         unsigned long length,
         
@@ -248,10 +248,10 @@ __global__ void patch_apply_gpu (
     //TODO: Run decompression on selected starting threads
     if (tid < patch_length)
     {
-        int idx = avar_decompress_base_value_gpu((int)log2((float)length)+1, global_data_patch_index, tid);
+        int idx = afl_decompress_base_value_gpu((int)log2((float)length)+1, global_data_patch_index, tid);
         //TODO: tu chyba jest blad
 
-        int val = avar_decompress_base_value_gpu(comp_h.patch_bit_length, global_data_patch_values, tid);
+        int val = afl_decompress_base_value_gpu(comp_h.patch_bit_length, global_data_patch_values, tid);
         /*printf("DIDX %d\n", idx);*/
 
         decompressed_data[idx] |= (val << comp_h.bit_length); //TODO: check if idx <length ??
@@ -261,8 +261,8 @@ __global__ void patch_apply_gpu (
     }
 }
 
-__host__ void run_pavar_compress_gpu_alternate(
-        pavar_header comp_h, 
+__host__ void run_pafl_compress_gpu_alternate(
+        pafl_header comp_h, 
         int *data, 
         int *compressed_data, 
         unsigned long length,
@@ -279,7 +279,7 @@ __host__ void run_pavar_compress_gpu_alternate(
     int block_size = 512; // better occupancy
     unsigned long block_number = (length + block_size * WARP_SIZE - 1) / (block_size);
 
-    pavar_compress_gpu_alternate <<<block_number, block_size>>> (
+    pafl_compress_gpu_alternate <<<block_number, block_size>>> (
             comp_h, 
             data, 
             compressed_data, 
@@ -293,7 +293,7 @@ __host__ void run_pavar_compress_gpu_alternate(
     block_size = WARP_SIZE * 8; // better occupancy 
     block_number = (length + block_size * WARP_SIZE - 1) / (block_size * WARP_SIZE);
 
-    avar_compress_gpu <<<block_number, block_size>>> (comp_h.bit_length, data, compressed_data, length);
+    afl_compress_gpu <<<block_number, block_size>>> (comp_h.bit_length, data, compressed_data, length);
 
     //Patch compress
     int patch_count;
@@ -303,14 +303,14 @@ __host__ void run_pavar_compress_gpu_alternate(
         block_size = WARP_SIZE * 8; // better occupancy 
         block_number = (patch_count + block_size * WARP_SIZE - 1) / (block_size * WARP_SIZE);
 
-        avar_compress_gpu <<<block_number, block_size>>> (comp_h.patch_bit_length, global_queue_patch_values, global_data_patch_values, patch_count);
+        afl_compress_gpu <<<block_number, block_size>>> (comp_h.patch_bit_length, global_queue_patch_values, global_data_patch_values, patch_count);
 
-        avar_compress_gpu <<<block_number, block_size>>> ((int)log2((float)length)+1, global_queue_patch_index, global_data_patch_index, patch_count);
+        afl_compress_gpu <<<block_number, block_size>>> ((int)log2((float)length)+1, global_queue_patch_index, global_data_patch_index, patch_count);
     }
 }
 
-__host__ void run_pavar_compress_gpu(
-        pavar_header comp_h, 
+__host__ void run_pafl_compress_gpu(
+        pafl_header comp_h, 
         int *data, 
         int *compressed_data, 
         unsigned long length,
@@ -327,7 +327,7 @@ __host__ void run_pavar_compress_gpu(
     int block_size = WARP_SIZE * 8; // better occupancy
     unsigned long block_number = (length + block_size * WARP_SIZE - 1) / (block_size * WARP_SIZE);
 
-    pavar_compress_gpu <<<block_number, block_size>>> (
+    pafl_compress_gpu <<<block_number, block_size>>> (
             comp_h, 
             data, 
             compressed_data, 
@@ -343,8 +343,8 @@ __host__ void run_pavar_compress_gpu(
             );
 }
 
-__host__ void run_pavar_decompress_gpu(
-        pavar_header comp_h, 
+__host__ void run_pafl_decompress_gpu(
+        pafl_header comp_h, 
         int *compressed_data, 
         int *data, 
         unsigned long length,
@@ -356,7 +356,7 @@ __host__ void run_pavar_decompress_gpu(
 {
     int block_size = WARP_SIZE * 8; // better occupancy
     unsigned long block_number = (length + block_size * WARP_SIZE - 1) / (block_size * WARP_SIZE);
-    avar_decompress_gpu <<<block_number, block_size>>> (comp_h.bit_length, compressed_data, data, length);
+    afl_decompress_gpu <<<block_number, block_size>>> (comp_h.bit_length, compressed_data, data, length);
 
     /*cudaErrorCheck();*/
     patch_apply_gpu <<<block_number * WARP_SIZE, block_size>>> (
@@ -370,8 +370,8 @@ __host__ void run_pavar_decompress_gpu(
             );
 }
 
-__device__  void pavar_compress_base_gpu (
-        pavar_header comp_h, 
+__device__  void pafl_compress_base_gpu (
+        pafl_header comp_h, 
 
         unsigned long data_id, 
         unsigned long comp_data_id, 

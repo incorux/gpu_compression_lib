@@ -8,7 +8,7 @@ NVCCFLAGS    += --compiler-options=-Wall,-Wno-unused-function -I$(CURDIR) -O3
 
 COMPRESSION_LIB_OBJ_BASE=
 COMPRESSION_LIB_OBJ_CPU =
-COMPRESSION_LIB_OBJ_GPU = compression/avar_gpu.o compression/tools.o compression/pavar_gpu.o
+COMPRESSION_LIB_OBJ_GPU = compression/afl_gpu.o compression/tools.o compression/pafl_gpu.o
 
 GPU_LIBS =  $(COMPRESSION_LIB_OBJ_GPU)
 CPU_LIBS =  $(COMPRESSION_LIB_OBJ_CPU)
