@@ -10,18 +10,19 @@
 /*#define PPRINT(name) printf("%c[1;34m",27);  printf name; printf("%c[30m Status: %c[1;32mOK%c[37m \n", 27,27,27);*/
 #define PPRINT_MANY(name) printf("%c[1;34m",27);  printf name; printf("%c[30m: %c[1;32mOK%c[37m ", 27,27,27);
 
-#define PPRINT_THROUGPUT(name, data_size) printf("%c[1;34m",27);  printf name; printf("%c[30m, %c[1;32mOK%c[37m, ", 27,27,27); TIMEIT_PRINT_THROUGPUT(data_size);
+#define PPRINT_THROUGPUT(name, data_size) printf("%c[1;34m",27);  printf name; printf("%c[30m, %c[37m", 27,27); TIMEIT_PRINT_THROUGPUT(data_size);
 
+template <typename T, char CWORD_SIZE>
 void afl_gpu_test(unsigned long max_size)
 {
-    int *dev_out;
-    int *dev_data;
-    int *host_data, *host_data2;
+    T *dev_out;
+    T *dev_data;
+    T *host_data, *host_data2;
 
     // for size less then 32 we actually will need more space than original data
-    int compressed_data_size = (max_size < 32 ? 32 : max_size) * sizeof(int); 
+    int compressed_data_size = (max_size < 32 ? 32 : max_size) * sizeof(T); 
 
-    int data_size = max_size * sizeof(int); 
+    unsigned long data_size = max_size * sizeof(T); 
 
     mmManager manager;
 
@@ -43,14 +44,14 @@ void afl_gpu_test(unsigned long max_size)
         cudaMemset(dev_out, 0, compressed_data_size); // Clean up before compression
 
         TIMEIT_START();
-        run_afl_compress_gpu <int, 32, 32> (i, dev_data, dev_out, max_size);
+        run_afl_compress_gpu <T, CWORD_SIZE, 32> (i, dev_data, dev_out, max_size);
         TIMEIT_END("*comp");
         cudaErrorCheck();
 
         cudaMemset(dev_data, 0, data_size); // Clean up before decompression
 
         TIMEIT_START();
-        run_afl_decompress_gpu <int, 32, 32> (i, dev_out, dev_data, max_size);
+        run_afl_decompress_gpu <T, CWORD_SIZE, 32> (i, dev_out, dev_data, max_size);
         TIMEIT_END("*decomp");
         cudaErrorCheck();
 
@@ -61,7 +62,7 @@ void afl_gpu_test(unsigned long max_size)
 
         compare_arrays(host_data2, host_data, max_size);
 
-        PPRINT_THROUGPUT(("GPU afl%d", i), data_size);
+        PPRINT_THROUGPUT(("%s fl=%d", __PRETTY_FUNCTION__, i), data_size);
     }
 
     mmCudaFreeAll(manager);
@@ -244,7 +245,11 @@ int main(int argc, char *argv[])
         cudaGetDeviceProperties(&deviceProp, dev);
 
         printf("\nDevice %d: \"%s\"\n", dev, deviceProp.name);
-        afl_gpu_test(max_size);
+        afl_gpu_test <int, 32> (max_size);
+        afl_gpu_test <long, 32> (max_size);
+
+        /*afl_gpu_test <int, 1> (max_size);*/
+        /*afl_gpu_test <long, 1> (max_size);*/
         afl_gpu_value_test(max_size);
         pafl_gpu_test(max_size);
     }

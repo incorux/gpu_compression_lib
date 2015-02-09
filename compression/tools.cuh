@@ -9,7 +9,8 @@
 template <typename T> void big_random_block ( unsigned long size, int limit_bits, T *data);
 template <typename T> void big_random_block_with_outliers ( unsigned long size, int outlier_count, int limit_bits, int outlier_bits,  T *data);
 
-int compare_arrays       ( int *in1, int *in2, unsigned long size);
+template <typename T>
+int compare_arrays       ( T *in1, T *in2, unsigned long size);
 int compare_arrays_float ( float *in1, float *in2, unsigned long size);
 
 // Errors and debug

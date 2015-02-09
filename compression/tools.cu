@@ -152,14 +152,23 @@ void mmCudaFree(mmManager &manager, void *ptr)
    for(i=manager.begin(); i != manager.end(); ++i) 
        if ((*i).data == ptr) __mmCudaFreeInternal(&(*i));
 }
+void compare_arrays_element_print(long i, long a, long b)
+{
+    DPRINT(("Error at %ld element (%ld != %ld)\n ", i, a, b));
+}
 
-int compare_arrays(int *in1, int *in2, unsigned long size)
+void compare_arrays_element_print(long i, int a, int b)
+{
+    DPRINT(("Error at %ld element (%d != %d)\n ", i, a, b));
+}
+template <typename T>
+int compare_arrays(T *in1, T *in2, unsigned long size)
 {
     unsigned long count_errors = 0;
     for(unsigned long i = 0; i < size; i++) {
         if(in1[i] != in2[i]) {
-            DPRINT(("Error at %ld element (%d != %d)\n ", i, in1[i], in2[i]));
             count_errors += 1;
+            compare_arrays_element_print(i, in1[i], in2[i]);
         }
     }
     if (count_errors)
@@ -201,3 +210,6 @@ template void big_random_block_with_outliers <int> ( unsigned long size, int out
 
 template void big_random_block <long> ( unsigned long size, int limit_bits, long *data);
 template void big_random_block_with_outliers <long> ( unsigned long size, int outlier_count, int limit_bits, int outlier_bits,  long *data);
+
+template int compare_arrays <long> (long *in1, long *in2, unsigned long size);
+template int compare_arrays <int> (int *in1, int *in2, unsigned long size);
