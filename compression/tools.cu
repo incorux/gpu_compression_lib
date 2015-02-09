@@ -28,14 +28,17 @@ unsigned long xorshf96(void) {          //period 2^96-1
         return __xorshf96_z;
 }
 // This is only for test purposes so it is optimized for speed (true randomness is not needed)
-void big_random_block( unsigned long size, int limit_bits, int *data) 
+
+template <typename T>
+void big_random_block( unsigned long size, int limit_bits, T *data) 
 {
     unsigned int mask = NBITSTOMASK(limit_bits);
     for (unsigned long i = 0; i < size; i++)
         data[i] = xorshf96() & mask;
 }
 
-void big_random_block_with_outliers( unsigned long size, int outlier_count, int limit_bits, int outlier_bits,  int *data) 
+template <typename T>
+void big_random_block_with_outliers( unsigned long size, int outlier_count, int limit_bits, int outlier_bits,  T *data) 
 {
     big_random_block(size, limit_bits, data);
     unsigned int mask = NBITSTOMASK(limit_bits + outlier_bits);
@@ -192,3 +195,9 @@ void gpuAssert(cudaError_t code, const char *file, int line, bool abort)
         if (abort) exit(code);
     }
 }
+
+template void big_random_block <int> ( unsigned long size, int limit_bits, int *data);
+template void big_random_block_with_outliers <int> ( unsigned long size, int outlier_count, int limit_bits, int outlier_bits,  int *data);
+
+template void big_random_block <long> ( unsigned long size, int limit_bits, long *data);
+template void big_random_block_with_outliers <long> ( unsigned long size, int outlier_count, int limit_bits, int outlier_bits,  long *data);
