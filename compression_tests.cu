@@ -12,15 +12,17 @@
 
 #define PPRINT_THROUGPUT(name, data_size) printf("%c[1;34m",27);  printf name; printf("%c[30m, %c[37m", 27,27); TIMEIT_PRINT_THROUGPUT(data_size);
 
-template <typename T, char CWORD_SIZE>
+template <typename T, int CWARP_SIZE>
 void afl_gpu_test(unsigned long max_size)
 {
     T *dev_out;
     T *dev_data;
     T *host_data, *host_data2;
 
+    int cword = sizeof(T) * 8;
+
     // for size less then 32 we actually will need more space than original data
-    int compressed_data_size = (max_size < 32 ? 32 : max_size) * sizeof(T); 
+    int compressed_data_size = (max_size < cword  ? cword : max_size) * sizeof(T); 
 
     unsigned long data_size = max_size * sizeof(T); 
 
@@ -34,7 +36,7 @@ void afl_gpu_test(unsigned long max_size)
     mmCudaMalloc(manager, (void **) &dev_out, compressed_data_size); 
     mmCudaMalloc(manager, (void **) &dev_data, data_size);
 
-    for (unsigned int i = 2; i <= 31; ++i) {
+    for (unsigned int i = 2; i < cword; ++i) {
         big_random_block(max_size, i, host_data);
 
         TIMEIT_START();
@@ -44,14 +46,14 @@ void afl_gpu_test(unsigned long max_size)
         cudaMemset(dev_out, 0, compressed_data_size); // Clean up before compression
 
         TIMEIT_START();
-        run_afl_compress_gpu <T, CWORD_SIZE, 32> (i, dev_data, dev_out, max_size);
+        run_afl_compress_gpu <T, sizeof(T) * 8, CWARP_SIZE> (i, dev_data, dev_out, max_size);
         TIMEIT_END("*comp");
         cudaErrorCheck();
 
         cudaMemset(dev_data, 0, data_size); // Clean up before decompression
 
         TIMEIT_START();
-        run_afl_decompress_gpu <T, CWORD_SIZE, 32> (i, dev_out, dev_data, max_size);
+        run_afl_decompress_gpu <T, sizeof(T) * 8, CWARP_SIZE> (i, dev_out, dev_data, max_size);
         TIMEIT_END("*decomp");
         cudaErrorCheck();
 
@@ -238,20 +240,20 @@ int main(int argc, char *argv[])
     int deviceCount = 0;
     cudaGetDeviceCount(&deviceCount);
 
-    for (int dev = 0; dev < deviceCount; ++dev)
+    for (int dev = 0; dev ==0 && dev < deviceCount; ++dev)
     {
         cudaSetDevice(dev);
         cudaDeviceProp deviceProp;
         cudaGetDeviceProperties(&deviceProp, dev);
 
         printf("\nDevice %d: \"%s\"\n", dev, deviceProp.name);
-        afl_gpu_test <int, 32> (max_size);
+        /*afl_gpu_test <int, 32> (max_size);*/
         afl_gpu_test <long, 32> (max_size);
 
         /*afl_gpu_test <int, 1> (max_size);*/
         /*afl_gpu_test <long, 1> (max_size);*/
-        afl_gpu_value_test(max_size);
-        pafl_gpu_test(max_size);
+        /*afl_gpu_value_test(max_size);*/
+        /*pafl_gpu_test(max_size);*/
     }
     return 0;
 }

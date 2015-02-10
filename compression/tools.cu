@@ -32,7 +32,7 @@ unsigned long xorshf96(void) {          //period 2^96-1
 template <typename T>
 void big_random_block( unsigned long size, int limit_bits, T *data) 
 {
-    unsigned int mask = NBITSTOMASK(limit_bits);
+    T mask = NBITSTOMASK(limit_bits);
     for (unsigned long i = 0; i < size; i++)
         data[i] = xorshf96() & mask;
 }
@@ -168,25 +168,11 @@ int compare_arrays(T *in1, T *in2, unsigned long size)
     for(unsigned long i = 0; i < size; i++) {
         if(in1[i] != in2[i]) {
             count_errors += 1;
-            compare_arrays_element_print(i, in1[i], in2[i]);
+            /*compare_arrays_element_print(i, in1[i], in2[i]);*/
         }
     }
     if (count_errors)
         DPRINT(("<================== ERROR ============= size = %ld errors = %ld\n", size, count_errors));
-    return count_errors;
-}
-
-int compare_arrays_float(float *in1, float *in2, unsigned long size)
-{
-    int count_errors = 0;
-    for(unsigned long i = 0; i < size; i++) {
-        if(in1[i] != in2[i]) {
-            DPRINT(("Error at %ld element (%f != %f)\n ", i, in1[i], in2[i]));
-            count_errors += 1;
-        }
-    }
-    if (count_errors)
-        DPRINT(("<================== ERROR ============= size = %ld errors = %d\n", size, count_errors));
     return count_errors;
 }
 
