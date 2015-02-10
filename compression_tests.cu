@@ -21,7 +21,7 @@ void afl_gpu_test(unsigned long max_size)
 
     int cword = sizeof(T) * 8;
 
-    // for size less then 32 we actually will need more space than original data
+    // for size less then cword we actually will need more space than original data
     int compressed_data_size = (max_size < cword  ? cword : max_size) * sizeof(T); 
 
     unsigned long data_size = max_size * sizeof(T); 
@@ -46,14 +46,14 @@ void afl_gpu_test(unsigned long max_size)
         cudaMemset(dev_out, 0, compressed_data_size); // Clean up before compression
 
         TIMEIT_START();
-        run_afl_compress_gpu <T, sizeof(T) * 8, CWARP_SIZE> (i, dev_data, dev_out, max_size);
+        run_afl_compress_gpu <T, CWARP_SIZE> (i, dev_data, dev_out, max_size);
         TIMEIT_END("*comp");
         cudaErrorCheck();
 
         cudaMemset(dev_data, 0, data_size); // Clean up before decompression
 
         TIMEIT_START();
-        run_afl_decompress_gpu <T, sizeof(T) * 8, CWARP_SIZE> (i, dev_out, dev_data, max_size);
+        run_afl_decompress_gpu <T, CWARP_SIZE> (i, dev_out, dev_data, max_size);
         TIMEIT_END("*decomp");
         cudaErrorCheck();
 
@@ -101,14 +101,14 @@ void afl_gpu_value_test(unsigned long max_size)
         cudaMemset(dev_out, 0, compressed_data_size); // Clean up before compression
 
         TIMEIT_START();
-        run_afl_compress_gpu < int, 32, 32 > (i, dev_data, dev_out, max_size);
+        run_afl_compress_gpu < int, 32 > (i, dev_data, dev_out, max_size);
         TIMEIT_END("*comp");
         cudaErrorCheck();
 
         cudaMemset(dev_data, 0, data_size); // Clean up before decompression
 
         TIMEIT_START();
-        run_afl_decompress_value_gpu <int, 32, 32> (i, dev_out, dev_data, max_size);
+        run_afl_decompress_value_gpu <int, 32> (i, dev_out, dev_data, max_size);
         TIMEIT_END("*decomp");
         cudaErrorCheck();
 
@@ -247,8 +247,11 @@ int main(int argc, char *argv[])
         cudaGetDeviceProperties(&deviceProp, dev);
 
         printf("\nDevice %d: \"%s\"\n", dev, deviceProp.name);
-        /*afl_gpu_test <int, 32> (max_size);*/
+        afl_gpu_test <int, 32> (max_size);
         afl_gpu_test <long, 32> (max_size);
+
+        afl_gpu_test <int, 1> (max_size);
+        afl_gpu_test <long, 1> (max_size);
 
         /*afl_gpu_test <int, 1> (max_size);*/
         /*afl_gpu_test <long, 1> (max_size);*/

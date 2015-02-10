@@ -24,42 +24,42 @@ __device__ __host__ __forceinline__ unsigned int GETNPBITS( int source, unsigned
 
 __device__ __host__ __forceinline__ unsigned long GETNPBITS( long source, unsigned int num_bits, unsigned int bit_start)
 {
-/*#if __CUDA_ARCH__ > 200  // This improves performance */
-    /*unsigned long bits;*/
-    /*asm("bfe.u64 %0, %1, %2, %3;" : "=l"(bits) : "l"((unsigned long) source), "r"(bit_start), "r"(num_bits));*/
-    /*return bits;*/
-/*#else*/
+#if __CUDA_ARCH__ > 200  // This improves performance
+    unsigned long bits;
+    asm("bfe.u64 %0, %1, %2, %3;" : "=l"(bits) : "l"((unsigned long) source), "r"(bit_start), "r"(num_bits));
+    return bits;
+#else
     return ((source>>bit_start) & LNBITSTOMASK(num_bits));
-/*#endif*/
+#endif
 }
 
 __device__ __host__ __forceinline__ unsigned long GETNBITS( long source, unsigned int num_bits)
 {
-/*#if __CUDA_ARCH__ > 200  // Use bfe implementation*/
-    /*return GETNPBITS(source, num_bits, 0);*/
-/*#else // In other case this will be faster*/
+#if __CUDA_ARCH__ > 200  // Use bfe implementation
+    return GETNPBITS(source, num_bits, 0);
+#else // In other case this will be faster
     return ((source) & LNBITSTOMASK(num_bits));
-/*#endif*/
+#endif
 }
 
 __device__ __host__ __forceinline__ unsigned int GETNBITS( int source, unsigned int num_bits)
 {
-/*#if __CUDA_ARCH__ > 200  // Use bfe implementation*/
-    /*return GETNPBITS(source, num_bits, 0);*/
-/*#else // In other case this will be faster*/
+#if __CUDA_ARCH__ > 200  // Use bfe implementation
+    return GETNPBITS(source, num_bits, 0);
+#else // In other case this will be faster
     return ((source) & NBITSTOMASK(num_bits));
-/*#endif*/
+#endif
 }
 
 __device__ __host__ __forceinline__ unsigned int BITLEN(unsigned int word) 
 { 
     unsigned int ret=0; 
-/*#if __CUDA_ARCH__ > 200  */
-    /*asm volatile ("bfind.u32 %0, %1;" : "=r"(ret) : "r"(word)); */
-/*#else*/
+#if __CUDA_ARCH__ > 200 
+    asm volatile ("bfind.u32 %0, %1;" : "=r"(ret) : "r"(word));
+#else
     while (word >>= 1) 
       ret++;
-/*#endif*/
+#endif
    return ret;
 }
 

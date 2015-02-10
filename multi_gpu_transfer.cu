@@ -37,7 +37,7 @@ void multi_gpu_compress(unsigned long max_size, unsigned int bit_length, bool di
     TIMEIT_SETUP();
 
     TIMEIT_START();
-    run_afl_compress_gpu <int, 32, 32> (bit_length, dev0_data, dev0_comp_out, max_size);
+    run_afl_compress_gpu <int, 32> (bit_length, dev0_data, dev0_comp_out, max_size);
     cudaErrorCheck();
     TIMEIT_END("*C");
 
@@ -54,7 +54,7 @@ void multi_gpu_compress(unsigned long max_size, unsigned int bit_length, bool di
     }
 
     TIMEIT_START();
-    run_afl_decompress_gpu <int, 32, 32> (bit_length, dev_data_source, dev1_data, max_size);
+    run_afl_decompress_gpu <int, 32> (bit_length, dev_data_source, dev1_data, max_size);
     cudaErrorCheck();
     TIMEIT_END("*D");
 
