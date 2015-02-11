@@ -1,6 +1,4 @@
 #include "tools/tools.cuh"
-#include "tools/data.cuh"
-#include "tools/memory.cuh"
 
 #include "compression/afl_gpu.cuh"
 #include <cuda.h>
