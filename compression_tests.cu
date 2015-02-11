@@ -250,13 +250,13 @@ int main(int argc, char *argv[])
         cudaGetDeviceProperties(&deviceProp, dev);
 
         printf("\nDevice %d: \"%s\"\n", dev, deviceProp.name);
-        /*afl_gpu_test <int, 32> (max_size);*/
-        /*afl_gpu_test <long, 32> (max_size);*/
+        afl_gpu_test <int, 32> (max_size);
+        afl_gpu_test <long, 32> (max_size);
 
-        /*afl_gpu_test <int, 1> (max_size);*/
-        /*afl_gpu_test <long, 1> (max_size);*/
+        afl_gpu_test <int, 1> (max_size);
+        afl_gpu_test <long, 1> (max_size);
 
-        afl_gpu_value_test(max_size);
+        /*afl_gpu_value_test(max_size);*/
         /*pafl_gpu_test(max_size);*/
     }
     return 0;
