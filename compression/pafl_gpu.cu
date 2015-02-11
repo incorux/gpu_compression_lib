@@ -1,7 +1,7 @@
 #include "pafl_gpu.cuh"
 #include "afl_gpu.cuh"
 #include "macros.cuh"
-#include "tools.cuh"
+#include "../tools/tools.cuh"
 #include <math.h>
 
 #include <stdio.h>

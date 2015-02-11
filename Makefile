@@ -5,10 +5,12 @@ NVCCLIBSFLAGS = -dc
 NVCCFLAGS    = -gencode arch=compute_20,code=sm_20 -gencode arch=compute_35,code=sm_35
 NVCCFLAGS    += --compiler-options=-Wall,-Wno-unused-function -I$(CURDIR) -O3
 
+TOOLS_SRC=$(wildcard tools/*.cu)
+COMPRESSION_SRC=$(wildcard compression/*.cu)
 
 COMPRESSION_LIB_OBJ_BASE=
 COMPRESSION_LIB_OBJ_CPU =
-COMPRESSION_LIB_OBJ_GPU = compression/afl_gpu.o compression/tools.o compression/pafl_gpu.o
+COMPRESSION_LIB_OBJ_GPU = $(TOOLS_SRC:.cu=.o) $(COMPRESSION_SRC:.cu=.o)
 
 GPU_LIBS =  $(COMPRESSION_LIB_OBJ_GPU)
 CPU_LIBS =  $(COMPRESSION_LIB_OBJ_CPU)

@@ -1,4 +1,7 @@
-#include "compression/tools.cuh"
+#include "tools/tools.cuh"
+#include "tools/data.cuh"
+#include "tools/memory.cuh"
+
 #include "compression/afl_gpu.cuh"
 #include "compression/pafl_gpu.cuh"
 

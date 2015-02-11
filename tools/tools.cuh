@@ -1,15 +1,9 @@
 #ifndef _TOOLS
 #define _TOOLS true
-#include "tools.cuh"
-#include "macros.cuh"
+
 #include <stdio.h>
 #include <list>
 
-// Tools
-template <typename T> void big_random_block ( unsigned long size, int limit_bits, T *data);
-template <typename T> void big_random_block_with_outliers ( unsigned long size, int outlier_count, int limit_bits, int outlier_bits,  T *data);
-
-template <typename T> int compare_arrays ( T *in1, T *in2, unsigned long size);
 
 // Errors and debug
 void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true);
@@ -17,30 +11,6 @@ void _cudaErrorCheck(const char *file, int line);
 
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 #define cudaErrorCheck()  { _cudaErrorCheck(__FILE__, __LINE__); }
-
-#define DEBUG 0
-
-#ifdef DEBUG
-# define DPRINT(x) printf x
-#else
-# define DPRINT(x) do {} while (0)
-#endif
-
-// Memory allocation manager
-typedef struct allocation_info
-{
-    void *data;
-    unsigned long size;
-    char device;
-    bool freed;
-} allocation_info;
-
-typedef std::list<struct allocation_info> mmManager;
-
-void mmCudaMallocHost ( mmManager &manager, void **data, unsigned long size);
-void mmCudaMalloc     ( mmManager &manager, void **data, unsigned long size);
-void mmCudaFreeAll    ( mmManager &manager);
-void mmCudaFree       ( mmManager &manager, void *ptr);
 
 // Time measuring tools
 typedef struct timeit_info
