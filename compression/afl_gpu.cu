@@ -24,7 +24,7 @@ template < typename T, char CWARP_SIZE >
 __host__ void run_afl_decompress_value_gpu(int bit_length, T *compressed_data, T *data, unsigned long length)
 {
     int block_size = CWARP_SIZE * 8; // better occupancy
-    unsigned long block_number = (length + block_size * CWARP_SIZE - 1) / (block_size);
+    unsigned long block_number = (length + block_size * CWORD_SIZE(T) - 1) / (block_size);
     afl_decompress_value_gpu <T, CWARP_SIZE> <<<block_number, block_size>>> (bit_length, compressed_data, data, length);
 }
 
@@ -134,17 +134,17 @@ __device__ __host__ T afl_decompress_base_value_gpu (
         unsigned long pos
         )
 {
-    int block = pos / (CWARP_SIZE * CWORD_SIZE(T));
+    int data_block = pos / (CWARP_SIZE * CWORD_SIZE(T));
     int pos_in_block = (pos % (CWARP_SIZE * CWORD_SIZE(T)));
     int pos_in_warp_lane = pos_in_block % CWARP_SIZE;
     int pos_in_warp_comp_block = pos_in_block / CWARP_SIZE;
 
-    unsigned long cblock_id = block * ( CWARP_SIZE * bit_length)
+    unsigned long cblock_id = data_block * ( CWARP_SIZE * bit_length)
         + pos_in_warp_lane 
         + ((pos_in_warp_comp_block * bit_length) / CWORD_SIZE(T)) * CWARP_SIZE;
 
     int bit_pos = pos_in_warp_comp_block * bit_length % CWORD_SIZE(T);
-    int bit_ret = (CWORD_SIZE(T) - bit_pos) >= bit_length ? bit_length : CWORD_SIZE(T) - bit_pos;
+    int bit_ret = bit_pos <= CWORD_SIZE(T)  - bit_length  ? bit_length : CWORD_SIZE(T) - bit_pos;
 
     T ret = GETNPBITS(compressed_data[cblock_id], bit_ret, bit_pos);
 
@@ -155,7 +155,8 @@ __device__ __host__ T afl_decompress_base_value_gpu (
 }
 
 
-// For now only those versions are available
+// For now only those versions are available and will be compiled into obj
+// A fast aligned version WARP_SIZE = 32
 template __device__ __host__ int afl_decompress_base_value_gpu <int, 32> (int, int*, unsigned long);
 template __device__ __host__ long afl_decompress_base_value_gpu <long, 32>(int, long*, unsigned long);
 
@@ -183,6 +184,7 @@ template __host__ void run_afl_decompress_gpu < long, 32> (int bit_length, long 
 template __host__ void run_afl_decompress_value_gpu < long, 32> (int bit_length, long *compressed_data , long *data, unsigned long length);
 template __host__ void run_afl_decompress_value_gpu < int, 32> (int bit_length, int *compressed_data , int *data, unsigned long length);
 
+// Non aligned version - identical to classical CPU/GPU version (up to 10x slower)
 template __device__ __host__ int afl_decompress_base_value_gpu <int, 1> (int, int*, unsigned long);
 template __device__ __host__ long afl_decompress_base_value_gpu <long, 1>(int, long*, unsigned long);
 

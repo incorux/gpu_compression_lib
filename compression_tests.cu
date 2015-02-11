@@ -109,6 +109,8 @@ void afl_gpu_value_test(unsigned long max_size)
 
         TIMEIT_START();
         run_afl_decompress_value_gpu <int, 32> (i, dev_out, dev_data, max_size);
+
+        /*run_afl_decompress_gpu <int, 32> (i, dev_out, dev_data, max_size);*/
         TIMEIT_END("*decomp");
         cudaErrorCheck();
 
@@ -247,15 +249,13 @@ int main(int argc, char *argv[])
         cudaGetDeviceProperties(&deviceProp, dev);
 
         printf("\nDevice %d: \"%s\"\n", dev, deviceProp.name);
-        afl_gpu_test <int, 32> (max_size);
-        afl_gpu_test <long, 32> (max_size);
-
-        afl_gpu_test <int, 1> (max_size);
-        afl_gpu_test <long, 1> (max_size);
+        /*afl_gpu_test <int, 32> (max_size);*/
+        /*afl_gpu_test <long, 32> (max_size);*/
 
         /*afl_gpu_test <int, 1> (max_size);*/
         /*afl_gpu_test <long, 1> (max_size);*/
-        /*afl_gpu_value_test(max_size);*/
+
+        afl_gpu_value_test(max_size);
         /*pafl_gpu_test(max_size);*/
     }
     return 0;
