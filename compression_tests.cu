@@ -258,6 +258,13 @@ int main(int argc, char *argv[])
 
         afl_gpu_value_test(max_size);
         /*pafl_gpu_test(max_size);*/
+
+        printf("\nDevice %d: \"%s\"\n", dev, deviceProp.name);
+        afl_gpu_test <unsigned int, FL_ALGORITHM_MOD_AFL> (max_size);
+        afl_gpu_test <unsigned long, FL_ALGORITHM_MOD_AFL> (max_size);
+
+        afl_gpu_test <unsigned int, FL_ALGORITHM_MOD_FL> (max_size);
+        afl_gpu_test <unsigned long, FL_ALGORITHM_MOD_FL> (max_size);
     }
     return 0;
 }
