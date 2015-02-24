@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-#define CWORD_SIZE(T)(T) sizeof(T) * 8
+#define CWORD_SIZE(T)(T) (sizeof(T) * 8)
 template < typename T, char CWARP_SIZE >
 __host__ void run_afl_compress_gpu(int bit_length, T *data, T *compressed_data, unsigned long length)
 {
@@ -139,9 +139,14 @@ __device__ __host__ T afl_decompress_base_value_gpu (
     int pos_in_warp_lane = pos_in_block % CWARP_SIZE;
     int pos_in_warp_comp_block = pos_in_block / CWARP_SIZE;
 
+
     unsigned long cblock_id = data_block * ( CWARP_SIZE * bit_length)
         + pos_in_warp_lane 
         + ((pos_in_warp_comp_block * bit_length) / CWORD_SIZE(T)) * CWARP_SIZE;
+
+    /*printf("data_block, %d, pos_in_block, %d, pos_in_warp_lane, %d, pos_in_warp_comp_block, %d, cblock_id, %ld %ld %ld\n", data_block, pos_in_block, pos_in_warp_lane, pos_in_warp_comp_block, cblock_id,*/
+            /*(long int)data_block * ( CWARP_SIZE * bit_length), (long int)((pos_in_warp_comp_block * bit_length)/CWORD_SIZE(T)));*/
+
 
     int bit_pos = pos_in_warp_comp_block * bit_length % CWORD_SIZE(T);
     int bit_ret = bit_pos <= CWORD_SIZE(T)  - bit_length  ? bit_length : CWORD_SIZE(T) - bit_pos;
