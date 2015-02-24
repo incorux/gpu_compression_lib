@@ -21,14 +21,6 @@ __host__ void run_afl_decompress_gpu(int bit_length, T *compressed_data, T *data
 }
 
 template < typename T, char CWARP_SIZE >
-__host__ void run_afl_decompress_value_gpu(int bit_length, T *compressed_data, T *data, unsigned long length)
-{
-    int block_size = CWARP_SIZE * 8; // better occupancy
-    unsigned long block_number = (length + block_size * CWORD_SIZE(T) - 1) / (block_size);
-    afl_decompress_value_gpu <T, CWARP_SIZE> <<<block_number, block_size>>> (bit_length, compressed_data, data, length);
-}
-
-template < typename T, char CWARP_SIZE >
 __global__ void afl_compress_gpu (int bit_length, T *data, T *compressed_data, unsigned long length)
 {
     unsigned int warp_lane = (threadIdx.x % CWARP_SIZE); 
@@ -50,17 +42,6 @@ __global__ void afl_decompress_gpu (int bit_length, T *compressed_data, T * deco
     afl_decompress_base_gpu <T, CWARP_SIZE> (bit_length, cdata_id, data_id, compressed_data, decompress_data, length);
 }
 
-template < typename T, char CWARP_SIZE >
-__global__ void afl_decompress_value_gpu (int bit_length, T *compressed_data, T * decompress_data, unsigned long length)
-{
-    unsigned long tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid < length)
-    {
-        decompress_data[tid] = afl_decompress_base_value_gpu <T, CWARP_SIZE> (bit_length, compressed_data, tid);
-    }
-}
-
-
 template <typename T, char CWARP_SIZE>
 __device__  __host__ void afl_compress_base_gpu (int bit_length, unsigned long data_id, unsigned long comp_data_id, T *data, T *compressed_data, unsigned long length)
 {
@@ -68,7 +49,7 @@ __device__  __host__ void afl_compress_base_gpu (int bit_length, unsigned long d
     unsigned int v1_pos=0, v1_len;
     unsigned long pos=comp_data_id, pos_data=data_id;
 
-    for (unsigned int i = 0; i < CWORD_SIZE(T) && pos_data < length; ++i) //TODO: Moze word_size tutaj ?
+    for (unsigned int i = 0; i < CWORD_SIZE(T) && pos_data < length; ++i) 
     {
         v1 = data[pos_data];
         pos_data += CWARP_SIZE;
@@ -127,87 +108,26 @@ __device__ __host__ void afl_decompress_base_gpu (int bit_length, unsigned long 
     }
 }
 
-template <typename T, char CWARP_SIZE>
-__device__ __host__ T afl_decompress_base_value_gpu (
-        int bit_length, 
-        T *compressed_data, 
-        unsigned long pos
-        )
-{
-    int data_block = pos / (CWARP_SIZE * CWORD_SIZE(T));
-    int pos_in_block = (pos % (CWARP_SIZE * CWORD_SIZE(T)));
-    int pos_in_warp_lane = pos_in_block % CWARP_SIZE;
-    int pos_in_warp_comp_block = pos_in_block / CWARP_SIZE;
-
-    unsigned long cblock_id = data_block * ( CWARP_SIZE * bit_length)
-        + pos_in_warp_lane 
-        + ((pos_in_warp_comp_block * bit_length) / CWORD_SIZE(T)) * CWARP_SIZE;
-
-    int bit_pos = pos_in_warp_comp_block * bit_length % CWORD_SIZE(T);
-    int bit_ret = bit_pos <= CWORD_SIZE(T)  - bit_length  ? bit_length : CWORD_SIZE(T) - bit_pos;
-
-    T ret = GETNPBITS(compressed_data[cblock_id], bit_ret, bit_pos);
-
-    if (bit_ret < bit_length)
-        ret |= GETNBITS(compressed_data[cblock_id+CWARP_SIZE], bit_length - bit_ret) << bit_ret;
-
-    return ret;
-}
-
-
-// For now only those versions are available and will be compiled into obj
+// For now only those versions are available and will be compiled and linked
+// This is intentional !!
 // A fast aligned version WARP_SIZE = 32
-template __device__ __host__ int afl_decompress_base_value_gpu <int, 32> (int, int*, unsigned long);
-template __device__ __host__ long afl_decompress_base_value_gpu <long, 32>(int, long*, unsigned long);
+#define AFL_SPEC(X) \
+    template __device__ __host__ void afl_decompress_base_gpu <X, 32> (int, unsigned long comp_data_id, unsigned long data_id, X *compressed_data, X *data, unsigned long length);\
+    template __device__  __host__ void afl_compress_base_gpu <X, 32> (int, unsigned long, unsigned long, X *, X *, unsigned long );\
+    template __global__ void afl_decompress_gpu <X, 32> ( int bit_length, X *compressed_data, X * decompress_data, unsigned long length);\
+    template __global__ void afl_compress_gpu < X, 32> ( int bit_length, X *data, X *compressed_data, unsigned long length);\
+    template __host__ void run_afl_compress_gpu <X, 32> (int bit_length, X *data, X *compressed_data, unsigned long length);\
+    template __host__ void run_afl_decompress_gpu <X, 32> (int bit_length, X *data, X *compressed_data, unsigned long length);
 
-template __device__ __host__ void afl_decompress_base_gpu <int, 32> (int, unsigned long comp_data_id, unsigned long data_id, int *compressed_data, int *data, unsigned long length);
-template __device__ __host__ void afl_decompress_base_gpu <long, 32> (int, unsigned long comp_data_id, unsigned long data_id, long *compressed_data, long *data, unsigned long length);
+FOR_EACH(AFL_SPEC, int, long, unsigned int, unsigned long)
 
-template __device__  __host__ void afl_compress_base_gpu <int, 32> (int, unsigned long, unsigned long, int *, int *, unsigned long );
-template __device__  __host__ void afl_compress_base_gpu <long, 32> (int, unsigned long, unsigned long, long *, long *, unsigned long );
+// Non aligned version - identical to classical CPU/GPU version (up to 10x slower then AFL)
+#define FL_SPEC(X) \
+    template __device__ __host__ void afl_decompress_base_gpu <X, 1> (int, unsigned long comp_data_id, unsigned long data_id, X *compressed_data, X *data, unsigned long length);\
+    template __device__  __host__ void afl_compress_base_gpu <X, 1> (int, unsigned long, unsigned long, X *, X *, unsigned long );\
+    template __global__ void afl_decompress_gpu <X, 1> ( int bit_length, X *compressed_data, X * decompress_data, unsigned long length);\
+    template __global__ void afl_compress_gpu < X, 1> ( int bit_length, X *data, X *compressed_data, unsigned long length);\
+    template __host__ void run_afl_compress_gpu <X, 1> (int bit_length, X *data, X *compressed_data, unsigned long length);\
+    template __host__ void run_afl_decompress_gpu <X, 1> (int bit_length, X *data, X *compressed_data, unsigned long length);
 
-template __global__ void afl_decompress_value_gpu < int, 32> ( int bit_length, int *compressed_data , int * decompress_data , unsigned long length);
-template __global__ void afl_decompress_value_gpu < long, 32> ( int bit_length, long *compressed_data , long * decompress_data , unsigned long length);
-
-template __global__ void afl_decompress_gpu < int, 32> ( int bit_length, int *compressed_data, int * decompress_data, unsigned long length);
-template __global__ void afl_decompress_gpu < long, 32> ( int bit_length, long *compressed_data, long * decompress_data, unsigned long length);
-
-template __global__ void afl_compress_gpu < long, 32> ( int bit_length, long *data, long *compressed_data, unsigned long length);
-template __global__ void afl_compress_gpu < int, 32> ( int bit_length, int *data, int *compressed_data, unsigned long length);
-
-template __host__ void run_afl_compress_gpu < int, 32> (int bit_length, int *data, int *compressed_data, unsigned long length);
-template __host__ void run_afl_compress_gpu < long, 32> (int bit_length, long *data, long *compressed_data, unsigned long length);
-
-template __host__ void run_afl_decompress_gpu < int, 32> (int bit_length, int *data, int *compressed_data, unsigned long length);
-template __host__ void run_afl_decompress_gpu < long, 32> (int bit_length, long *data, long *compressed_data, unsigned long length);
-
-template __host__ void run_afl_decompress_value_gpu < long, 32> (int bit_length, long *compressed_data , long *data, unsigned long length);
-template __host__ void run_afl_decompress_value_gpu < int, 32> (int bit_length, int *compressed_data , int *data, unsigned long length);
-
-// Non aligned version - identical to classical CPU/GPU version (up to 10x slower)
-template __device__ __host__ int afl_decompress_base_value_gpu <int, 1> (int, int*, unsigned long);
-template __device__ __host__ long afl_decompress_base_value_gpu <long, 1>(int, long*, unsigned long);
-
-template __device__ __host__ void afl_decompress_base_gpu <int, 1> (int, unsigned long comp_data_id, unsigned long data_id, int *compressed_data, int *data, unsigned long length);
-template __device__ __host__ void afl_decompress_base_gpu <long, 1> (int, unsigned long comp_data_id, unsigned long data_id, long *compressed_data, long *data, unsigned long length);
-
-template __device__  __host__ void afl_compress_base_gpu <int, 1> (int, unsigned long, unsigned long, int *, int *, unsigned long );
-template __device__  __host__ void afl_compress_base_gpu <long, 1> (int, unsigned long, unsigned long, long *, long *, unsigned long );
-
-template __global__ void afl_decompress_value_gpu < int, 1> ( int bit_length, int *compressed_data , int * decompress_data , unsigned long length);
-template __global__ void afl_decompress_value_gpu < long, 1> ( int bit_length, long *compressed_data , long * decompress_data , unsigned long length);
-
-template __global__ void afl_decompress_gpu < int, 1> ( int bit_length, int *compressed_data, int * decompress_data, unsigned long length);
-template __global__ void afl_decompress_gpu < long, 1> ( int bit_length, long *compressed_data, long * decompress_data, unsigned long length);
-
-template __global__ void afl_compress_gpu < long, 1> ( int bit_length, long *data, long *compressed_data, unsigned long length);
-template __global__ void afl_compress_gpu < int, 1> ( int bit_length, int *data, int *compressed_data, unsigned long length);
-
-template __host__ void run_afl_compress_gpu < int, 1> (int bit_length, int *data, int *compressed_data, unsigned long length);
-template __host__ void run_afl_compress_gpu < long, 1> (int bit_length, long *data, long *compressed_data, unsigned long length);
-
-template __host__ void run_afl_decompress_gpu < int, 1> (int bit_length, int *data, int *compressed_data, unsigned long length);
-template __host__ void run_afl_decompress_gpu < long, 1> (int bit_length, long *data, long *compressed_data, unsigned long length);
-
-template __host__ void run_afl_decompress_value_gpu < long, 1> (int bit_length, long *compressed_data , long *data, unsigned long length);
-template __host__ void run_afl_decompress_value_gpu < int, 1> (int bit_length, int *compressed_data , int *data, unsigned long length);
+FOR_EACH(FL_SPEC, int, long, unsigned int, unsigned long)

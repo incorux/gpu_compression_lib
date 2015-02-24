@@ -62,11 +62,10 @@ int compare_arrays(T *in1, T *in2, unsigned long size)
     return count_errors;
 }
 
-template void big_random_block <int> ( unsigned long size, int limit_bits, int *data);
-template void big_random_block_with_outliers <int> ( unsigned long size, int outlier_count, int limit_bits, int outlier_bits,  int *data);
 
-template void big_random_block <long> ( unsigned long size, int limit_bits, long *data);
-template void big_random_block_with_outliers <long> ( unsigned long size, int outlier_count, int limit_bits, int outlier_bits,  long *data);
+#define DATA_FUNC_SPEC(X) \
+template void big_random_block <X> ( unsigned long size, int limit_bits, X *data);\
+template void big_random_block_with_outliers <X> ( unsigned long size, int outlier_count, int limit_bits, int outlier_bits,  X *data);\
+template int compare_arrays <X> (X *in1, X *in2, unsigned long size);
 
-template int compare_arrays <long> (long *in1, long *in2, unsigned long size);
-template int compare_arrays <int> (int *in1, int *in2, unsigned long size);
+FOR_EACH(DATA_FUNC_SPEC, int, long, unsigned int, unsigned long)

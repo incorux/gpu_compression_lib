@@ -43,4 +43,4 @@ ctags:
 fixcuda:
 	sudo nvidia-smi -pm 1
 export:
-	git archive master --prefix gpu_compression_lib/ | bzip2 > gpu_compression_lib.tar.bz2
+	git archive HEAD --prefix gpu_compression_lib/ | bzip2 > gpu_compression_lib.tar.bz2
