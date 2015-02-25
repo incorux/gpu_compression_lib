@@ -14,7 +14,7 @@
 #define PPRINT_THROUGPUT(name, data_size) printf("%c[1;34m",27);  printf name; printf("%c[30m, %c[37m", 27,27); TIMEIT_PRINT_THROUGPUT(data_size);
 
 template <typename T, int CWARP_SIZE>
-void afl_gpu_test(unsigned long max_size)
+void afl_gpu_test(unsigned long max_size, bool block_decompress=true)
 {
     T *dev_out;
     T *dev_data;
@@ -54,7 +54,10 @@ void afl_gpu_test(unsigned long max_size)
         cudaMemset(dev_data, 0, data_size); // Clean up before decompression
 
         TIMEIT_START();
-        run_afl_decompress_gpu <T, CWARP_SIZE> (i, dev_out, dev_data, max_size);
+        if (block_decompress)
+            run_afl_decompress_gpu <T, CWARP_SIZE> (i, dev_out, dev_data, max_size);
+        else
+            run_afl_decompress_value_gpu <T, CWARP_SIZE> (i, dev_out, dev_data, max_size);
         TIMEIT_END("*decomp");
         cudaErrorCheck();
 
@@ -66,63 +69,6 @@ void afl_gpu_test(unsigned long max_size)
         compare_arrays(host_data2, host_data, max_size);
 
         PPRINT_THROUGPUT(("%s fl=%d", __PRETTY_FUNCTION__, i), data_size);
-    }
-
-    mmCudaFreeAll(manager);
-}
-
-void afl_gpu_value_test(unsigned long max_size)
-{
-    int *dev_out;
-    int *dev_data;
-    int *host_data, *host_data2;
-
-    // for size less then 32 we actually will need more space than original data
-    int compressed_data_size = (max_size < 32 ? 32 : max_size) * sizeof(int); 
-
-    int data_size = max_size * sizeof(int); 
-
-    mmManager manager;
-
-    TIMEIT_SETUP();
-
-    mmCudaMallocHost(manager, (void**)&host_data,  data_size);
-    mmCudaMallocHost(manager, (void**)&host_data2, data_size);
-
-    mmCudaMalloc(manager, (void **) &dev_out, compressed_data_size); 
-    mmCudaMalloc(manager, (void **) &dev_data, data_size);
-
-    for (unsigned int i = 2; i <= 31; ++i) {
-        big_random_block(max_size, i, host_data);
-
-        TIMEIT_START();
-        gpuErrchk( cudaMemcpy(dev_data, host_data, data_size, cudaMemcpyHostToDevice) );
-        TIMEIT_END("M->G");
-
-        cudaMemset(dev_out, 0, compressed_data_size); // Clean up before compression
-
-        TIMEIT_START();
-        run_afl_compress_gpu < int, 32 > (i, dev_data, dev_out, max_size);
-        TIMEIT_END("*comp");
-        cudaErrorCheck();
-
-        cudaMemset(dev_data, 0, data_size); // Clean up before decompression
-
-        TIMEIT_START();
-        run_afl_decompress_value_gpu <int, 32> (i, dev_out, dev_data, max_size);
-
-        /*run_afl_decompress_gpu <int, 32> (i, dev_out, dev_data, max_size);*/
-        TIMEIT_END("*decomp");
-        cudaErrorCheck();
-
-        cudaMemset(host_data2, 0, data_size); 
-        TIMEIT_START();
-        gpuErrchk(cudaMemcpy(host_data2, dev_data, data_size, cudaMemcpyDeviceToHost));
-        TIMEIT_END("G->M");
-
-        compare_arrays(host_data2, host_data, max_size);
-
-        PPRINT_THROUGPUT(("GPU afl%d", i), data_size);
     }
 
     mmCudaFreeAll(manager);
@@ -243,28 +189,31 @@ int main(int argc, char *argv[])
     int deviceCount = 0;
     cudaGetDeviceCount(&deviceCount);
 
-    for (int dev = 0; dev ==0 && dev < deviceCount; ++dev)
+    for (int dev = 0; dev < deviceCount; ++dev)
     {
         cudaSetDevice(dev);
         cudaDeviceProp deviceProp;
         cudaGetDeviceProperties(&deviceProp, dev);
 
-        /*printf("\nDevice %d: \"%s\"\n", dev, deviceProp.name);*/
+        printf("\nDevice %d: \"%s\"\n", dev, deviceProp.name);
         /*afl_gpu_test <int, 32> (max_size);*/
         /*afl_gpu_test <long, 32> (max_size);*/
 
         /*afl_gpu_test <int, 1> (max_size);*/
         /*afl_gpu_test <long, 1> (max_size);*/
 
-        afl_gpu_value_test(max_size);
+        /*afl_gpu_test <unsigned int, FL_ALGORITHM_MOD_AFL> (max_size);*/
+        /*afl_gpu_test <unsigned long, FL_ALGORITHM_MOD_AFL> (max_size);*/
+
+        /*afl_gpu_test <unsigned int, FL_ALGORITHM_MOD_FL> (max_size);*/
+        /*afl_gpu_test <unsigned long, FL_ALGORITHM_MOD_FL> (max_size);*/
+
         /*pafl_gpu_test(max_size);*/
 
-        printf("\nDevice %d: \"%s\"\n", dev, deviceProp.name);
-        afl_gpu_test <unsigned int, FL_ALGORITHM_MOD_AFL> (max_size);
-        afl_gpu_test <unsigned long, FL_ALGORITHM_MOD_AFL> (max_size);
+        /*afl_gpu_test <unsigned long, FL_ALGORITHM_MOD_FL> (max_size, false);*/
+        /*afl_gpu_test <unsigned long, FL_ALGORITHM_MOD_AFL> (max_size, false);*/
 
-        afl_gpu_test <unsigned int, FL_ALGORITHM_MOD_FL> (max_size);
-        afl_gpu_test <unsigned long, FL_ALGORITHM_MOD_FL> (max_size);
+        afl_gpu_test <unsigned long, FL_ALGORITHM_MOD_AFL> (max_size, true);
     }
     return 0;
 }
