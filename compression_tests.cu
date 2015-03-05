@@ -114,22 +114,7 @@ void pafl_gpu_test(unsigned long max_size)
 
         TIMEIT_START();
         //TODO
-        run_pafl_compress_gpu_alternate(
-                comp_h,
-                dev_data,
-                dev_out,
-                max_size,
-                
-                dev_queue_patch_values,
-                dev_queue_patch_index,
-                dev_queue_patch_count,
-
-                dev_data_patch_values,
-                dev_data_patch_index,
-                dev_data_patch_count
-                );
-
-        /*run_pafl_compress_gpu(*/
+        /*run_pafl_compress_gpu_alternate(*/
                 /*comp_h,*/
                 /*dev_data,*/
                 /*dev_out,*/
@@ -143,6 +128,21 @@ void pafl_gpu_test(unsigned long max_size)
                 /*dev_data_patch_index,*/
                 /*dev_data_patch_count*/
                 /*);*/
+
+        run_pafl_compress_gpu(
+                comp_h,
+                dev_data,
+                dev_out,
+                max_size,
+                
+                dev_queue_patch_values,
+                dev_queue_patch_index,
+                dev_queue_patch_count,
+
+                dev_data_patch_values,
+                dev_data_patch_index,
+                dev_data_patch_count
+                );
 
         TIMEIT_END("*comp");
         cudaErrorCheck();
@@ -208,12 +208,12 @@ int main(int argc, char *argv[])
         /*afl_gpu_test <unsigned int, FL_ALGORITHM_MOD_FL> (max_size);*/
         /*afl_gpu_test <unsigned long, FL_ALGORITHM_MOD_FL> (max_size);*/
 
-        /*pafl_gpu_test(max_size);*/
+        pafl_gpu_test(max_size);
 
         /*afl_gpu_test <unsigned long, FL_ALGORITHM_MOD_FL> (max_size, false);*/
         /*afl_gpu_test <unsigned long, FL_ALGORITHM_MOD_AFL> (max_size, false);*/
 
-        afl_gpu_test <unsigned long, FL_ALGORITHM_MOD_AFL> (max_size, true);
+        /*afl_gpu_test <unsigned long, FL_ALGORITHM_MOD_AFL> (max_size, true);*/
     }
     return 0;
 }
