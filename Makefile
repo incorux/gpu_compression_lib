@@ -16,9 +16,14 @@ GPU_LIBS =  $(COMPRESSION_LIB_OBJ_GPU)
 CPU_LIBS =  $(COMPRESSION_LIB_OBJ_CPU)
 ALL_LIBS =  $(COMPRESSION_LIB_OBJ_BASE) 
 
+
+TESTS_SRC=$(wildcard tests/test*.cu)
+TESTS_OBJ = $(TESTS_SRC:.cu=.o)
+TESTS_RUNER = tests/run_tests.out
+
 PROGS = multi_gpu_transfer.out compression_tests.out 
 
-all:$(PROGS) 
+all:$(PROGS) $(TESTS_RUNER)
 
 debug: NVCCFLAGS += -g -G 
 debug: ctags $(PROGS) 
@@ -32,13 +37,16 @@ clean:
 $(PROGS): %.out: %.o $(GPU_LIBS) $(CPU_LIBS) $(ALL_LIBS)
 	$(NVCC) $(NVCCFLAGS)  $< $(GPU_LIBS) $(CPU_LIBS) $(ALL_LIBS) -o $@
 
+$(TESTS_RUNER): %.out: %.o $(GPU_LIBS) $(CPU_LIBS) $(ALL_LIBS) $(TESTS_OBJ)
+	$(NVCC) $(NVCCFLAGS)  $< $(GPU_LIBS) $(CPU_LIBS) $(ALL_LIBS) $(TESTS_OBJ) -o $@
+
 .SUFFIXES: .cu .out .o
 
 .cu.o: %.cu %.h
 	$(NVCC) $(NVCCFLAGS) $(NVCCLIBSFLAGS) $< -o $@
 
 ctags:
-	@ctags --langmap=c++:+.cu --append=no *.cu*  compression/*.cu* 2>&1 /dev/null
+	@ctags --langmap=c++:+.cu --append=no *.cu*  compression/*.cu* tools/*.cu* tests/*.cu* 2>&1 /dev/null
 
 fixcuda:
 	sudo nvidia-smi -pm 1

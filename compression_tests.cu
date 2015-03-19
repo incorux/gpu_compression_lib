@@ -66,7 +66,7 @@ void afl_gpu_test(unsigned long max_size, bool block_decompress=true)
         gpuErrchk(cudaMemcpy(host_data2, dev_data, data_size, cudaMemcpyDeviceToHost));
         TIMEIT_END("G->M");
 
-        compare_arrays(host_data2, host_data, max_size);
+        CHECK(compare_arrays(host_data2, host_data, max_size));
 
         PPRINT_THROUGPUT(("%s fl=%d", __PRETTY_FUNCTION__, i), data_size);
     }
@@ -114,22 +114,7 @@ void pafl_gpu_test(unsigned long max_size)
 
         TIMEIT_START();
         //TODO
-        /*run_pafl_compress_gpu_alternate(*/
-                /*comp_h,*/
-                /*dev_data,*/
-                /*dev_out,*/
-                /*max_size,*/
-                
-                /*dev_queue_patch_values,*/
-                /*dev_queue_patch_index,*/
-                /*dev_queue_patch_count,*/
-
-                /*dev_data_patch_values,*/
-                /*dev_data_patch_index,*/
-                /*dev_data_patch_count*/
-                /*);*/
-
-        run_pafl_compress_gpu(
+        run_pafl_compress_gpu_alternate(
                 comp_h,
                 dev_data,
                 dev_out,
@@ -143,6 +128,21 @@ void pafl_gpu_test(unsigned long max_size)
                 dev_data_patch_index,
                 dev_data_patch_count
                 );
+
+        /*run_pafl_compress_gpu(*/
+                /*comp_h,*/
+                /*dev_data,*/
+                /*dev_out,*/
+                /*max_size,*/
+                
+                /*dev_queue_patch_values,*/
+                /*dev_queue_patch_index,*/
+                /*dev_queue_patch_count,*/
+
+                /*dev_data_patch_values,*/
+                /*dev_data_patch_index,*/
+                /*dev_data_patch_count*/
+                /*);*/
 
         TIMEIT_END("*comp");
         cudaErrorCheck();

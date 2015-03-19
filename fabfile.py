@@ -8,6 +8,8 @@ env.use_ssh_config = True
 hosts_config = {
         "teslabot":"/home/eror/",
         "gpunode2":"/home/samba/przymusp/",
+        #gpunode2 z PW
+        "192.168.137.7":"/home/samba/przymusp/",
         }
 
 @task

@@ -30,6 +30,7 @@ __global__ void pafl_compress_gpu_alternate2 (
     __shared__ int private_warp_patch_values[32][16];
     __shared__ int private_warp_patch_index [32][16];
 
+    /*volatile __shared__ int private_warp_patch_count[32];*/
     __shared__ int private_warp_patch_count[32];
 
     __shared__ int private_block_patch_values[32*16];
@@ -54,6 +55,7 @@ __global__ void pafl_compress_gpu_alternate2 (
         int v1 = data[tid];
         if ( v1 & mask) {
             int p = atomicAdd(private_warp_patch_count+warp_lane, 1);
+            /*int p = private_warp_patch_count[warp_lane]++;*/
             private_warp_patch_index[warp_lane][p] = (int)tid;
             private_warp_patch_values[warp_lane][p] = (v1 >> comp_h.bit_length);
         }
@@ -281,7 +283,7 @@ __host__ void run_pafl_compress_gpu_alternate(
     int block_size = 512; // better occupancy
     unsigned long block_number = (length + block_size * WARP_SIZE - 1) / (block_size);
 
-    pafl_compress_gpu_alternate <<<block_number, block_size>>> (
+    pafl_compress_gpu_alternate2 <<<block_number, block_size>>> (
             comp_h, 
             data, 
             compressed_data, 

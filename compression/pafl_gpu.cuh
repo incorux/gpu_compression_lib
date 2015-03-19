@@ -84,4 +84,5 @@ __host__ void run_pafl_compress_gpu_alternate(
         int *global_data_patch_index,
         int *global_data_patch_count
         );
+
 #endif
