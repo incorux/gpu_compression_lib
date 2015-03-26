@@ -5,9 +5,7 @@
 #include "compression/afl_gpu.cuh"
 #include "compression/pafl_gpu.cuh"
 
-#include <fstream>
-#include <string>
-#include <map>
+#include <typeinfo>
 
 #define PPRINT_THROUGPUT(name, data_size) {printf("%c[1;34m",27);  printf name; printf("%c[30m, %c[37m", 27,27); TIMEIT_PRINT_THROUGPUT(data_size);}
 
@@ -15,7 +13,7 @@ template <typename T, int CWARP_SIZE>
 class test_afl
 {
 public:
-    void allocateMemory() {
+   virtual  void allocateMemory() {
         mmCudaMallocHost(manager, (void**)&host_data,  data_size);
         mmCudaMallocHost(manager, (void**)&host_data2, data_size);
 
@@ -23,15 +21,15 @@ public:
         mmCudaMalloc(manager, (void **) &dev_data, data_size);
     }
 
-    void initializeData(int bit_length) {
+    virtual void initializeData(int bit_length) {
         big_random_block(max_size, bit_length, host_data);
     }
 
-    void transferDataToGPU() {
+    virtual void transferDataToGPU() {
         gpuErrchk( cudaMemcpy(dev_data, host_data, data_size, cudaMemcpyHostToDevice) );
     }
 
-    void cleanBeforeCompress() {
+    virtual void cleanBeforeCompress() {
         cudaMemset(dev_out, 0, compressed_data_size); // Clean up before compression
     }
 
@@ -39,11 +37,11 @@ public:
         run_afl_compress_gpu <T, CWARP_SIZE> (bit_length, dev_data, dev_out, max_size);
     }
 
-    void errorCheck() { 
+    virtual void errorCheck() { 
         cudaErrorCheck();
     }
 
-    void cleanBeforeDecompress() {
+    virtual void cleanBeforeDecompress() {
         cudaMemset(dev_data, 0, data_size); // Clean up before decompression
     }
 
@@ -51,12 +49,12 @@ public:
         run_afl_decompress_gpu <T, CWARP_SIZE> (bit_length, dev_out, dev_data, max_size);
     }
 
-    void transferDataFromGPU() {
+    virtual void transferDataFromGPU() {
         cudaMemset(host_data2, 0, data_size); 
         gpuErrchk(cudaMemcpy(host_data2, dev_data, data_size, cudaMemcpyDeviceToHost));
     }
 
-    void run(unsigned int max_size, bool print = false)
+    virtual void run(unsigned int max_size, bool print = false)
     {
         this->max_size = max_size;
         cword = sizeof(T) * 8;
@@ -96,7 +94,7 @@ public:
 
             CHECK(testData()==0);
             
-            if(print) PPRINT_THROUGPUT(("%s fl=%d", __PRETTY_FUNCTION__, i), data_size);
+            if(print) PPRINT_THROUGPUT(("%s, %s, %d", __PRETTY_FUNCTION__, typeid(T).name(), i), data_size);
         }
     }
 
@@ -151,7 +149,7 @@ RUN_TEST("RFL", test_afl_random_access, 1);
 #define RUN_PERF_TEST(NAME, CNAME, PARAM)\
 TEST_CASE( NAME " performance test", "[" NAME "][PERF][hide]" ) {\
     SECTION("int: PERF data set")   {CNAME <int, PARAM> ().run(PERF_DATA_SET, true);}\
-    SECTION("long: PERF data set")  {CNAME <int, PARAM>  ().run(PERF_DATA_SET, true);}\
+    SECTION("long: PERF data set")  {CNAME <long, PARAM>  ().run(PERF_DATA_SET, true);}\
 }
 
 RUN_PERF_TEST("AFL", test_afl, 32);
@@ -161,3 +159,37 @@ RUN_PERF_TEST("RAFL", test_afl_random_access, 32);
 RUN_PERF_TEST("RFL", test_afl_random_access, 1);
 
 
+template <typename T, int CWARP_SIZE> 
+class test_pafl: public test_afl<T, CWARP_SIZE> 
+{
+    public: 
+
+        virtual void allocateMemory() {
+            mmCudaMallocHost(this->manager,(void**)&this->host_data, this->max_size * sizeof(int));
+            mmCudaMallocHost(this->manager,(void**)&this->host_data2, this->max_size * sizeof(int));
+
+            mmCudaMalloc(this->manager, (void **) &this->dev_out, this->max_size * sizeof(int)); // maximal compression size
+            mmCudaMalloc(this->manager, (void **) &this->dev_data, this->max_size * sizeof(int));
+
+            mmCudaMalloc(this->manager, (void **) &this->dev_data_patch_count, sizeof(int));
+            mmCudaMalloc(this->manager, (void **) &this->dev_data_patch_index, outlier_count * sizeof(int));
+            mmCudaMalloc(this->manager, (void **) &this->dev_data_patch_values, outlier_count * sizeof(int));
+
+            mmCudaMalloc(this->manager, (void **) &this->dev_queue_patch_count, sizeof(int));
+            mmCudaMalloc(this->manager, (void **) &this->dev_queue_patch_index, outlier_count * sizeof(int));
+            mmCudaMalloc(this->manager, (void **) &this->dev_queue_patch_values, outlier_count * sizeof(int));
+        }
+        virtual void decompressData(int bit_length) 
+        {
+            run_afl_decompress_value_gpu <T, CWARP_SIZE> (bit_length, this->dev_out, this->dev_data, this->max_size);
+        };
+
+        test_pafl(float outlier_percent): outlier_percent(outlier_percent)
+    { };
+    protected:
+
+        T *dev_data_patch_index, *dev_data_patch_values, *dev_data_patch_count;
+        T *dev_queue_patch_index, *dev_queue_patch_values, *dev_queue_patch_count;
+        int outlier_count;
+        float outlier_percent;
+};
