@@ -3,7 +3,6 @@
 
 #include <stdio.h>
 
-#define CWORD_SIZE(T)(T) (sizeof(T) * 8)
 template < typename T, char CWARP_SIZE >
 __host__ void run_afl_compress_gpu(int bit_length, T *data, T *compressed_data, unsigned long length)
 {
@@ -163,13 +162,13 @@ __device__ __host__ T afl_decompress_base_value_gpu (
 // This is intentional !!
 #define GFL_SPEC(X, A) \
     template __device__ __host__ void afl_decompress_base_gpu <X, A> (int, unsigned long comp_data_id, unsigned long data_id, X *compressed_data, X *data, unsigned long length);\
-    template __device__  __host__ void afl_compress_base_gpu <X, A> (int, unsigned long, unsigned long, X *, X *, unsigned long );\
+    template __device__ __host__ void afl_compress_base_gpu <X, A> (int, unsigned long, unsigned long, X *, X *, unsigned long );\
+    template __device__ __host__ X afl_decompress_base_value_gpu <X, A> ( int bit_length, X *compressed_data, unsigned long pos);\
     template __global__ void afl_decompress_gpu <X, A> ( int bit_length, X *compressed_data, X * decompress_data, unsigned long length);\
     template __global__ void afl_compress_gpu < X, A> ( int bit_length, X *data, X *compressed_data, unsigned long length);\
+    template __global__ void afl_decompress_value_gpu <X, A> (int bit_length, X *compressed_data, X * decompress_data, unsigned long length);\
     template __host__ void run_afl_compress_gpu <X, A> (int bit_length, X *data, X *compressed_data, unsigned long length);\
     template __host__ void run_afl_decompress_gpu <X, A> (int bit_length, X *data, X *compressed_data, unsigned long length);\
-    template __device__ __host__ X afl_decompress_base_value_gpu <X, A> ( int bit_length, X *compressed_data, unsigned long pos);\
-    template __global__ void afl_decompress_value_gpu <X, A> (int bit_length, X *compressed_data, X * decompress_data, unsigned long length);\
     template __host__ void run_afl_decompress_value_gpu <X, A> (int bit_length, X *compressed_data, X *data, unsigned long length);
 
 // A fast aligned version WARP_SIZE = 32

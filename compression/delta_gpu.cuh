@@ -1,23 +1,27 @@
 #ifndef DELTA_CUH_KKZZHX97
 #define DELTA_CUH_KKZZHX97
 
-
 template <typename T>
-__global__ void delta_compress_gpu (T *data, T *compressed_data, unsigned long length) 
+__global__ void delta_compress_gpu (T *data, T *compressed_data, T *spoints, unsigned long length, unsigned long spoints_length) 
 {
     int tid = ((blockIdx.x * blockDim.x) + threadIdx.x);
     int laneId = threadIdx.x & 0x1f;
+    int warpId = tid / 32; //TODO: fix
 
     int value1=0;
     int value2=0;
     int zeroLaneValue=0;
+
     char neighborId = laneId - 1;
 
     //TODO: add if data index in range
-    value1 = ( 32 * 32 ) - laneId; //TODO: Read from data store
+    value1 = data[tid];
     zeroLaneValue = value1;
 
-    if (laneId == 0)  neighborId = 31; 
+    if (laneId == 0)  {
+        neighborId = 31; 
+        spoints[warpId] = value1;
+    }
 
     int ret = 0;
 
@@ -35,7 +39,7 @@ __global__ void delta_compress_gpu (T *data, T *compressed_data, unsigned long l
             printf("Thread %d final value = %d\n", threadIdx.x, value2 - value1);
         }
 
-        value1 = (32*32) - laneId - i * 32; //TODO: Read next value from data store
+        value1 = data[tid + i * 32]; 
 
         if (ret != 1)
         {
@@ -44,13 +48,14 @@ __global__ void delta_compress_gpu (T *data, T *compressed_data, unsigned long l
     }
 }
 
-
 template <typename T>
-__global__ void delta_decompress_gpu (T *compressed_data, T *data, unsigned long length, int width=32)
+__global__ void delta_decompress_gpu (T *compressed_data, T *spoints, T *data, unsigned long length, unsigned int spoints_length, int width=32)
 {
     int id = ((blockIdx.x * blockDim.x) + threadIdx.x);
     int lane_id = id % warpSize;
-    int value = data[id];
+    int warpId = threadIdx.x / 32; //TODO: fix
+
+    T value = data[id] + spoints[warpId];
     int laneZeroValue=0;
 
     for (int j = 0;  j < 3; ++ j)
@@ -69,5 +74,4 @@ __global__ void delta_decompress_gpu (T *compressed_data, T *data, unsigned long
         if (lane_id == 0) value=laneZeroValue + value;
     }
 }
-
 #endif /* end of include guard: DELTA_CUH_KKZZHX97 */

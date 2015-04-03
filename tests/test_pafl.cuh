@@ -17,7 +17,6 @@ class test_pafl: public test_afl<T, CWARP_SIZE>
             mmCudaMalloc(this->manager, (void **) &this->dev_data_patch_count, sizeof(int));
             mmCudaMalloc(this->manager, (void **) &this->dev_data_patch_index, outlier_data_size);
             mmCudaMalloc(this->manager, (void **) &this->dev_data_patch_values, outlier_data_size);
-
             mmCudaMalloc(this->manager, (void **) &this->dev_queue_patch_count, sizeof(int));
             mmCudaMalloc(this->manager, (void **) &this->dev_queue_patch_index, outlier_data_size);
             mmCudaMalloc(this->manager, (void **) &this->dev_queue_patch_values, outlier_data_size);

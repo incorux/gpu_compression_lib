@@ -2,6 +2,7 @@
 #define macros 0
 
 // This should work independently from _CUDA_ARCH__ number
+#define CWORD_SIZE(T)(T) (sizeof(T) * 8)
 
 #define NBITSTOMASK(n) ((1<<(n)) - 1)
 #define LNBITSTOMASK(n) ((1L<<(n)) - 1)
