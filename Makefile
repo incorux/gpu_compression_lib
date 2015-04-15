@@ -43,7 +43,7 @@ $(TESTS_RUNER): %.out: %.o $(GPU_LIBS) $(CPU_LIBS) $(ALL_LIBS) $(TESTS_OBJ)
 
 .SUFFIXES: .cu .out .o
 
-.cu.o: %.cu %.h
+.cu.o: %.cu %.h %.cuh
 	$(NVCC) $(NVCCFLAGS) $(NVCCLIBSFLAGS) $< -o $@
 
 ctags:

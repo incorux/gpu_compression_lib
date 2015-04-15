@@ -72,8 +72,8 @@ public:
         allocateMemory();
         TIMEIT_SETUP();
 
-        for (unsigned int i = 1; i < cword; ++i) {
-            initializeData(i);
+        for (unsigned int bit_length = 1; bit_length < cword; ++bit_length) {
+            initializeData(bit_length);
 
             TIMEIT_START();
             transferDataToGPU();
@@ -82,7 +82,7 @@ public:
             cleanBeforeCompress();
             
             TIMEIT_START();
-            compressData(i);
+            compressData(bit_length);
             TIMEIT_END("*comp");
             
             errorCheck();
@@ -90,7 +90,7 @@ public:
             cleanBeforeDecompress();
 
             TIMEIT_START();
-            decompressData(i);
+            decompressData(bit_length);
             TIMEIT_END("*comp");
             
             errorCheck();
@@ -99,9 +99,10 @@ public:
             transferDataFromGPU();
             TIMEIT_END("G->M");
 
+            CAPTURE(bit_length);
             CHECK(testData()==0);
             
-            if(print) PPRINT_THROUGPUT(("%s, %s, %d", __PRETTY_FUNCTION__, typeid(T).name(), i), data_size);
+            if(print) PPRINT_THROUGPUT(("%s, %s, %d", __PRETTY_FUNCTION__, typeid(T).name(), bit_length), data_size);
         }
     }
 
@@ -132,9 +133,34 @@ protected:
 template <typename T, int CWARP_SIZE> class test_afl_random_access: public test_afl<T, CWARP_SIZE> {
 public: virtual void decompressData(int bit_length) {
         run_afl_decompress_value_gpu <T, CWARP_SIZE> (bit_length, this->dev_out, this->dev_data, this->max_size);
+    }
+};
 
+template <typename T, int CWARP_SIZE> class test_afl_cpu: public test_afl<T, CWARP_SIZE> {
+public: 
+
+   virtual void allocateMemory() {
+        mmCudaMallocHost(this->manager, (void**)&this->host_data,  this->data_size);
+        mmCudaMallocHost(this->manager, (void**)&this->host_data2, this->data_size);
+
+        mmCudaMallocHost(this->manager, (void **)&this->host_out, this->data_size); 
     }
 
+    virtual void transferDataToGPU() {}
+    virtual void cleanBeforeCompress() {} 
+    virtual void errorCheck() {}
+    virtual void cleanBeforeDecompress() {}
+    virtual void transferDataFromGPU() {}
+
+    virtual void compressData(int bit_length) {
+        run_afl_compress_cpu <T, CWARP_SIZE> (bit_length, this->host_data, this->host_out, this->max_size);
+    }
+
+    virtual void decompressData(int bit_length) {
+        run_afl_decompress_cpu <T, CWARP_SIZE> (bit_length, this->host_out, this->host_data2, this->max_size);
+    }
+    protected:
+        T *host_out;
 };
 
 #endif /* end of include guard: TEST_AFL_CUH_VSFESWCR */

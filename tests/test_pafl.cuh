@@ -10,7 +10,7 @@ class test_pafl: public test_afl<T, CWARP_SIZE>
             mmCudaMallocHost(this->manager,(void**)&this->host_data, this->data_size);
             mmCudaMallocHost(this->manager,(void**)&this->host_data2, this->data_size);
 
-            // allocate maximal compressed data size - improves testing time
+            // allocate maximal compressed data size rather than independent allocations for each compression ratio- improves testing time
             mmCudaMalloc(this->manager, (void **) &this->dev_out, this->data_size); 
             mmCudaMalloc(this->manager, (void **) &this->dev_data, this->data_size);
 

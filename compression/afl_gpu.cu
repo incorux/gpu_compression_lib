@@ -4,6 +4,57 @@
 #include <stdio.h>
 
 template < typename T, char CWARP_SIZE >
+__host__ void run_afl_compress_cpu(int bit_length, T *data, T *compressed_data, unsigned long length)
+{
+
+    unsigned int block_size = CWARP_SIZE * 8; 
+    unsigned long block_number = (length + block_size * CWORD_SIZE(T) - 1) / (block_size * CWORD_SIZE(T));
+
+    unsigned int tid, bid;
+
+    for (tid = 0, bid = 0; bid <= block_number; tid++)
+    {
+        if (tid == block_size)
+        {
+           tid = 0;
+           bid += 1;
+        }
+
+        unsigned int warp_lane = (tid % CWARP_SIZE); 
+        unsigned long data_block = bid * block_size + tid - warp_lane;
+        unsigned long data_id = data_block * CWORD_SIZE(T) + warp_lane;
+        unsigned long cdata_id = data_block * bit_length + warp_lane;
+
+        afl_compress_base_gpu <T, CWARP_SIZE> (bit_length, data_id, cdata_id, data, compressed_data, length);
+    }
+}
+
+template < typename T, char CWARP_SIZE >
+__host__ void run_afl_decompress_cpu(int bit_length, T *compressed_data, T *decompress_data, unsigned long length)
+{
+    unsigned int block_size = CWARP_SIZE * 8; 
+    unsigned long block_number = (length + block_size * CWORD_SIZE(T) - 1) / (block_size * CWORD_SIZE(T));
+
+    unsigned long tid, bid;
+
+    for (tid = 0, bid = 0; bid < block_number; tid++)
+    {
+        if (tid == block_size)
+        {
+           tid = 0;
+           bid += 1;
+        }
+
+        unsigned int warp_lane = (tid % CWARP_SIZE); 
+        unsigned long data_block = bid * block_size + tid - warp_lane;
+        unsigned long data_id = data_block * CWORD_SIZE(T) + warp_lane;
+        unsigned long cdata_id = data_block * bit_length + warp_lane;
+
+        afl_decompress_base_gpu <T, CWARP_SIZE> (bit_length, cdata_id, data_id, compressed_data, decompress_data, length);
+    }
+}
+
+template < typename T, char CWARP_SIZE >
 __host__ void run_afl_compress_gpu(int bit_length, T *data, T *compressed_data, unsigned long length)
 {
     int block_size = CWARP_SIZE * 8; // better occupancy 
@@ -169,6 +220,8 @@ __device__ __host__ T afl_decompress_base_value_gpu (
     template __global__ void afl_decompress_value_gpu <X, A> (int bit_length, X *compressed_data, X * decompress_data, unsigned long length);\
     template __host__ void run_afl_compress_gpu <X, A> (int bit_length, X *data, X *compressed_data, unsigned long length);\
     template __host__ void run_afl_decompress_gpu <X, A> (int bit_length, X *data, X *compressed_data, unsigned long length);\
+    template __host__ void run_afl_compress_cpu <X, A> (int bit_length, X *data, X *compressed_data, unsigned long length);\
+    template __host__ void run_afl_decompress_cpu <X, A> (int bit_length, X *data, X *compressed_data, unsigned long length);\
     template __host__ void run_afl_decompress_value_gpu <X, A> (int bit_length, X *compressed_data, X *data, unsigned long length);
 
 // A fast aligned version WARP_SIZE = 32
