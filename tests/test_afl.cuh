@@ -159,7 +159,7 @@ public:
     virtual void decompressData(int bit_length) {
         run_afl_decompress_cpu <T, CWARP_SIZE> (bit_length, this->host_out, this->host_data2, this->max_size);
     }
-    protected:
+protected:
         T *host_out;
 };
 

@@ -2,8 +2,8 @@ NVCC=nvcc
 
 NVCCLIBSFLAGS = -dc 
 #NVCCFLAGS    = -gencode arch=compute_20,code=sm_20 -gencode arch=compute_30,code=sm_30 -gencode arch=compute_35,code=sm_35
-#NVCCFLAGS    = -gencode arch=compute_20,code=sm_20 -gencode arch=compute_35,code=sm_35
-NVCCFLAGS    = -gencode arch=compute_35,code=sm_35
+NVCCFLAGS    = -gencode arch=compute_20,code=sm_20 -gencode arch=compute_35,code=sm_35
+#NVCCFLAGS    = -gencode arch=compute_35,code=sm_35
 NVCCFLAGS    += --compiler-options=-Wall,-Wno-unused-function -I$(CURDIR) -O3
 
 TOOLS_SRC=$(wildcard tools/*.cu)
@@ -33,7 +33,7 @@ verbose: NVCCFLAGS += -Xptxas="-v"
 verbose: ctags $(PROGS) 
 
 clean:
-	rm -f $(CPU_LIBS) $(GPU_LIBS) $(ALL_LIBS) $(PROGS) *.o *.pyc tags gpu_compression_lib.tar.bz2
+	rm -f $(CPU_LIBS) $(GPU_LIBS) $(ALL_LIBS) $(PROGS) $(TESTS_OBJ) $(TESTS_RUNER) *.o *.pyc tags gpu_compression_lib.tar.bz2
 
 $(PROGS): %.out: %.o $(GPU_LIBS) $(CPU_LIBS) $(ALL_LIBS)
 	$(NVCC) $(NVCCFLAGS)  $< $(GPU_LIBS) $(CPU_LIBS) $(ALL_LIBS) -o $@
@@ -43,7 +43,7 @@ $(TESTS_RUNER): %.out: %.o $(GPU_LIBS) $(CPU_LIBS) $(ALL_LIBS) $(TESTS_OBJ)
 
 .SUFFIXES: .cu .out .o
 
-.cu.o: %.cu %.h %.cuh
+.cu.o: %.cu %.h %.cuh 
 	$(NVCC) $(NVCCFLAGS) $(NVCCLIBSFLAGS) $< -o $@
 
 ctags:
