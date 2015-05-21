@@ -12,8 +12,10 @@ struct OtherOpt {
     void setValidDeviceNumber( int i ) {
         int deviceCount = 0;
         cudaGetDeviceCount(&deviceCount);
-        if( i < 0 || i > deviceCount )
-            throw std::domain_error( "The device number is incorrect, please set valid cuda device number" );
+        if( i < 0 || i > deviceCount ) {
+            Catch::cout()<<"The device number is incorrect, please set valid cuda device number\n";
+            exit(0);
+        }
         deviceNumber = i;
 
         cudaSetDevice(deviceNumber);
@@ -21,7 +23,7 @@ struct OtherOpt {
         cudaDeviceProp deviceProp;
         cudaGetDeviceProperties(&deviceProp, deviceNumber);
 
-        std::cout<<"Device "<< deviceNumber <<": "<<deviceProp.name<<"\n";
+        Catch::cout() <<"Device "<< deviceNumber <<": "<<deviceProp.name<<"\n";
     }
 };
 
@@ -31,26 +33,18 @@ int main(int argc, char** argv)
     Catch::Session session;
     session.applyCommandLine(argc, argv, Catch::Session::OnUnusedOptions::Ignore);
 
-    if (argc >= 2) {
-        OtherOpt config;
-        Catch::Clara::CommandLine<OtherOpt> cli;
+    OtherOpt config;
+    Catch::Clara::CommandLine<OtherOpt> cli;
 
-        cli.bindProcessName( &OtherOpt::processName );
+    cli["-D"]["--device"]
+        .describe( "Set cuda device" )
+        .bind( &OtherOpt::setValidDeviceNumber, "deviceNumber");
 
-        cli["-d"]["--device"]
-            .describe( "Set cuda device" )
-            .bind( &OtherOpt::setValidDeviceNumber, "deviceNumber");
+    cli.parseInto( argc-1, argv+1, config );  //parse extra args (like cuda device)
 
-        cli["-?"]["-h"]["--help"]
-            .describe( "display usage information" )
-            .bind( &OtherOpt::showHelp );
-
-        cli.parseInto( argc-1, argv+1, config );  //parse extra args (like cuda device)
-
-        if(config.showHelp) {
-            cli.usage(Catch::cout(), config.processName);
-            return 0;
-        }
+    if(session.configData().showHelp) {
+        Catch::cout() << "\ngpu_compression_lib specific options\n";
+        cli.usage(Catch::cout(), session.configData().processName);
     }
     
     return session.run();
