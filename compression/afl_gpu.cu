@@ -57,7 +57,7 @@ __host__ void run_afl_decompress_cpu(const unsigned int bit_length, T *compresse
 template < typename T, char CWARP_SIZE >
 __host__ void run_afl_compress_gpu(const unsigned int bit_length, T *data, T *compressed_data, unsigned long length)
 {
-    const int block_size = CWARP_SIZE * 8; // better occupancy 
+    const unsigned int block_size = CWARP_SIZE * 8; // better occupancy 
     const unsigned long block_number = (length + block_size * CWORD_SIZE(T) - 1) / (block_size * CWORD_SIZE(T));
     afl_compress_gpu <T, CWARP_SIZE> <<<block_number, block_size>>> (bit_length, data, compressed_data, length);
 }
@@ -65,7 +65,7 @@ __host__ void run_afl_compress_gpu(const unsigned int bit_length, T *data, T *co
 template < typename T, char CWARP_SIZE >
 __host__ void run_afl_decompress_gpu(const unsigned int bit_length, T *compressed_data, T *data, unsigned long length)
 {
-    const int block_size = CWARP_SIZE * 8; // better occupancy
+    const unsigned int block_size = CWARP_SIZE * 8; // better occupancy
     const unsigned long block_number = (length + block_size * CWORD_SIZE(T) - 1) / (block_size * CWORD_SIZE(T));
     afl_decompress_gpu <T, CWARP_SIZE> <<<block_number, block_size>>> (bit_length, compressed_data, data, length);
 }
@@ -73,7 +73,7 @@ __host__ void run_afl_decompress_gpu(const unsigned int bit_length, T *compresse
 template < typename T, char CWARP_SIZE >
 __host__ void run_afl_decompress_value_gpu(const unsigned int bit_length, T *compressed_data, T *data, unsigned long length)
 {
-    const int block_size = CWARP_SIZE * 8; // better occupancy
+    const unsigned int block_size = CWARP_SIZE * 8; // better occupancy
     const unsigned long block_number = (length + block_size * CWORD_SIZE(T) - 1) / (block_size);
     afl_decompress_value_gpu <T, CWARP_SIZE> <<<block_number, block_size>>> (bit_length, compressed_data, data, length);
 }
@@ -184,18 +184,18 @@ __device__ __host__ T afl_decompress_base_value_gpu (
         unsigned long pos
         )
 {
-    const int data_block = pos / (CWARP_SIZE * CWORD_SIZE(T));
-    const int pos_in_block = (pos % (CWARP_SIZE * CWORD_SIZE(T)));
-    const int pos_in_warp_lane = pos_in_block % CWARP_SIZE;
-    const int pos_in_warp_comp_block = pos_in_block / CWARP_SIZE;
+    const unsigned int data_block = pos / (CWARP_SIZE * CWORD_SIZE(T));
+    const unsigned int pos_in_block = (pos % (CWARP_SIZE * CWORD_SIZE(T)));
+    const unsigned int pos_in_warp_lane = pos_in_block % CWARP_SIZE;
+    const unsigned int pos_in_warp_comp_block = pos_in_block / CWARP_SIZE;
 
     const unsigned long cblock_id = 
         data_block * ( CWARP_SIZE * bit_length)
         + pos_in_warp_lane 
         + ((pos_in_warp_comp_block * bit_length) / CWORD_SIZE(T)) * CWARP_SIZE;
 
-    const int bit_pos = pos_in_warp_comp_block * bit_length % CWORD_SIZE(T);
-    const int bit_ret = bit_pos <= CWORD_SIZE(T)  - bit_length  ? bit_length : CWORD_SIZE(T) - bit_pos;
+    const unsigned int bit_pos = pos_in_warp_comp_block * bit_length % CWORD_SIZE(T);
+    const unsigned int bit_ret = bit_pos <= CWORD_SIZE(T)  - bit_length  ? bit_length : CWORD_SIZE(T) - bit_pos;
 
     T ret = GETNPBITS(compressed_data[cblock_id], bit_ret, bit_pos);
 
@@ -213,18 +213,18 @@ __device__ __host__ T afl_compress_base_value_gpu (
         T value
         )
 {
-    const int data_block = pos / (CWARP_SIZE * CWORD_SIZE(T));
-    const int pos_in_block = (pos % (CWARP_SIZE * CWORD_SIZE(T)));
-    const int pos_in_warp_lane = pos_in_block % CWARP_SIZE;
-    const int pos_in_warp_comp_block = pos_in_block / CWARP_SIZE;
+    const unsigned int data_block = pos / (CWARP_SIZE * CWORD_SIZE(T));
+    const unsigned int pos_in_block = (pos % (CWARP_SIZE * CWORD_SIZE(T)));
+    const unsigned int pos_in_warp_lane = pos_in_block % CWARP_SIZE;
+    const unsigned int pos_in_warp_comp_block = pos_in_block / CWARP_SIZE;
 
     const unsigned long cblock_id = 
         data_block * ( CWARP_SIZE * bit_length)
         + pos_in_warp_lane 
         + ((pos_in_warp_comp_block * bit_length) / CWORD_SIZE(T)) * CWARP_SIZE;
 
-    const int bit_pos = pos_in_warp_comp_block * bit_length % CWORD_SIZE(T);
-    const int bit_ret = bit_pos <= CWORD_SIZE(T)  - bit_length  ? bit_length : CWORD_SIZE(T) - bit_pos;
+    const unsigned int bit_pos = pos_in_warp_comp_block * bit_length % CWORD_SIZE(T);
+    const unsigned int bit_ret = bit_pos <= CWORD_SIZE(T)  - bit_length  ? bit_length : CWORD_SIZE(T) - bit_pos;
 
     T ret = GETNPBITS(compressed_data[cblock_id], bit_ret, bit_pos);
 
