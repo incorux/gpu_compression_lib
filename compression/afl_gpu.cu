@@ -219,9 +219,9 @@ __device__ __host__ T afl_compress_base_value_gpu (
     const unsigned int pos_in_warp_comp_block = pos_in_block / CWARP_SIZE;
 
     const unsigned long cblock_id = 
-        data_block * ( CWARP_SIZE * bit_length)
-        + pos_in_warp_lane 
-        + ((pos_in_warp_comp_block * bit_length) / CWORD_SIZE(T)) * CWARP_SIZE;
+        data_block * ( CWARP_SIZE * bit_length) // move to data block
+        + pos_in_warp_lane // move to starting position in data block 
+        + ((pos_in_warp_comp_block * bit_length) / CWORD_SIZE(T)) * CWARP_SIZE; // move to value
 
     const unsigned int bit_pos = pos_in_warp_comp_block * bit_length % CWORD_SIZE(T);
     const unsigned int bit_ret = bit_pos <= CWORD_SIZE(T)  - bit_length  ? bit_length : CWORD_SIZE(T) - bit_pos;
