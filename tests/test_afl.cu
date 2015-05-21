@@ -17,6 +17,9 @@ RUN_TEST("FL", test_afl, 1);
 RUN_TEST("AFL_CPU", test_afl_cpu, 32);
 RUN_TEST("FL_CPU", test_afl_cpu, 1);
 
+RUN_TEST("RAFL_CPU", test_afl_random_access_cpu, 32);
+RUN_TEST("RFL_CPU", test_afl_random_access_cpu, 1);
+
 RUN_TEST("RAFL", test_afl_random_access, 32);
 RUN_TEST("RFL", test_afl_random_access, 1);
 

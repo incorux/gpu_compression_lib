@@ -15,6 +15,32 @@
 //TODO: distinguish between signed/unsigned versions
 
 // This depend on _CUDA_ARCH__ number
+
+template <typename T> 
+__device__ __host__ __forceinline__ T SETNPBITS( T *source, T value, unsigned int num_bits, unsigned int bit_start)
+{
+    T mask = NBITSTOMASK(num_bits);
+    *source &= ~(mask<<bit_start); // clear space in source
+    *source |= (value & mask) << bit_start; // set values
+    return *source;
+}
+
+__device__ __host__ __forceinline__ long SETNPBITS( long *source, long value, unsigned int num_bits, unsigned int bit_start)
+{
+    long mask = LNBITSTOMASK(num_bits);
+    *source &= ~(mask<<bit_start); // clear space in source
+    *source |= (value & mask) << bit_start; // set values
+    return *source;
+}
+
+__device__ __host__ __forceinline__ unsigned long SETNPBITS( unsigned long *source, unsigned long value, unsigned int num_bits, unsigned int bit_start)
+{
+    unsigned long mask = LNBITSTOMASK(num_bits);
+    *source &= ~(mask<<bit_start); // clear space in source
+    *source |= (value & mask) << bit_start; // set values
+    return *source;
+}
+
 __device__ __host__ __forceinline__ unsigned int GETNPBITS( int source, unsigned int num_bits, unsigned int bit_start)
 {
 #if __CUDA_ARCH__ > 200  // This improves performance 

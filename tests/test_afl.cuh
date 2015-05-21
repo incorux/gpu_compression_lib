@@ -120,9 +120,9 @@ protected:
     T *host_data; 
     T *host_data2;
 
-    int cword;
+    unsigned int cword;
 
-    int compressed_data_size;
+    unsigned int compressed_data_size;
     unsigned long data_size;
     unsigned long max_size;
 
@@ -158,6 +158,33 @@ public:
 
     virtual void decompressData(int bit_length) {
         run_afl_decompress_cpu <T, CWARP_SIZE> (bit_length, this->host_out, this->host_data2, this->max_size);
+    }
+protected:
+        T *host_out;
+};
+
+template <typename T, int CWARP_SIZE> class test_afl_random_access_cpu: public test_afl<T, CWARP_SIZE> {
+public: 
+
+   virtual void allocateMemory() {
+        mmCudaMallocHost(this->manager, (void**)&this->host_data,  this->data_size);
+        mmCudaMallocHost(this->manager, (void**)&this->host_data2, this->data_size);
+
+        mmCudaMallocHost(this->manager, (void **)&this->host_out, this->data_size); 
+    }
+
+    virtual void transferDataToGPU() {}
+    virtual void cleanBeforeCompress() {} 
+    virtual void errorCheck() {}
+    virtual void cleanBeforeDecompress() {}
+    virtual void transferDataFromGPU() {}
+
+    virtual void compressData(int bit_length) {
+        run_afl_compress_value_cpu <T, CWARP_SIZE> (bit_length, this->host_data, this->host_out, this->max_size);
+    }
+
+    virtual void decompressData(int bit_length) {
+        run_afl_decompress_value_gpu <T, CWARP_SIZE> (bit_length, this->host_out, this->host_data2, this->max_size);
     }
 protected:
         T *host_out;

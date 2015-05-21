@@ -30,6 +30,16 @@ __host__ void run_afl_compress_cpu( const unsigned int bit_length, T *data, T *c
 }
 
 template < typename T, char CWARP_SIZE >
+__host__ void run_afl_compress_value_cpu( const unsigned int bit_length, T *data, T *compressed_data, const unsigned long length)
+{
+
+    unsigned long tid;
+
+    for (tid = 0; tid < length; tid++)
+        afl_compress_base_value_gpu <T, CWARP_SIZE> (bit_length, compressed_data, tid, data[tid]);
+}
+
+template < typename T, char CWARP_SIZE >
 __host__ void run_afl_decompress_cpu(const unsigned int bit_length, T *compressed_data, T *decompress_data, unsigned long length)
 {
     const unsigned int block_size = CWARP_SIZE * 8; 
@@ -206,7 +216,7 @@ __device__ __host__ T afl_decompress_base_value_gpu (
 }
 
 template <typename T, char CWARP_SIZE>
-__device__ __host__ T afl_compress_base_value_gpu (
+__device__ __host__ void afl_compress_base_value_gpu (
         const unsigned int bit_length, 
         T *compressed_data, 
         unsigned long pos,
@@ -218,20 +228,19 @@ __device__ __host__ T afl_compress_base_value_gpu (
     const unsigned int pos_in_warp_lane = pos_in_block % CWARP_SIZE;
     const unsigned int pos_in_warp_comp_block = pos_in_block / CWARP_SIZE;
 
-    const unsigned long cblock_id = 
+    const unsigned long cblock_id =
         data_block * ( CWARP_SIZE * bit_length) // move to data block
-        + pos_in_warp_lane // move to starting position in data block 
+        + pos_in_warp_lane // move to starting position in data block
         + ((pos_in_warp_comp_block * bit_length) / CWORD_SIZE(T)) * CWARP_SIZE; // move to value
 
     const unsigned int bit_pos = pos_in_warp_comp_block * bit_length % CWORD_SIZE(T);
     const unsigned int bit_ret = bit_pos <= CWORD_SIZE(T)  - bit_length  ? bit_length : CWORD_SIZE(T) - bit_pos;
 
-    T ret = GETNPBITS(compressed_data[cblock_id], bit_ret, bit_pos);
+
+    SETNPBITS(compressed_data + cblock_id, value, bit_ret, bit_pos);
 
     if (bit_ret < bit_length)
-        ret |= GETNBITS(compressed_data[cblock_id+CWARP_SIZE], bit_length - bit_ret) << bit_ret;
-
-    return ret;
+        SETNPBITS(compressed_data + cblock_id + CWARP_SIZE, value >> bit_ret, bit_length - bit_ret, 0);
 }
 
 // For now only those versions are available and will be compiled and linked
@@ -240,13 +249,17 @@ __device__ __host__ T afl_compress_base_value_gpu (
     template __device__ __host__ void afl_decompress_base_gpu <X, A> (const unsigned int bit_length, unsigned long comp_data_id, unsigned long data_id, X *compressed_data, X *data, unsigned long length);\
     template __device__ __host__ void afl_compress_base_gpu <X, A> (const unsigned int bit_length, unsigned long, unsigned long, X *, X *, unsigned long );\
     template __device__ __host__ X afl_decompress_base_value_gpu <X, A> ( const unsigned int bit_length, X *compressed_data, unsigned long pos);\
+    template __device__ __host__ void afl_compress_base_value_gpu <X, A> ( const unsigned int bit_length, X *compressed_data, unsigned long pos, X value);\
+\
     template __global__ void afl_decompress_gpu <X, A> ( const unsigned int bit_length, X *compressed_data, X * decompress_data, unsigned long length);\
     template __global__ void afl_compress_gpu < X, A> ( const unsigned int bit_length, X *data, X *compressed_data, unsigned long length);\
     template __global__ void afl_decompress_value_gpu <X, A> (const unsigned int bit_length, X *compressed_data, X * decompress_data, unsigned long length);\
+\
     template __host__ void run_afl_compress_gpu <X, A> (const unsigned int bit_length, X *data, X *compressed_data, unsigned long length);\
     template __host__ void run_afl_decompress_gpu <X, A> (const unsigned int bit_length, X *data, X *compressed_data, unsigned long length);\
     template __host__ void run_afl_compress_cpu <X, A> (const unsigned int bit_length, X *data, X *compressed_data, unsigned long length);\
     template __host__ void run_afl_decompress_cpu <X, A> (const unsigned int bit_length, X *data, X *compressed_data, unsigned long length);\
+    template __host__ void run_afl_compress_value_cpu <X, A> (const unsigned int bit_length, X *data, X *compressed_data, unsigned long length);\
     template __host__ void run_afl_decompress_value_gpu <X, A> (const unsigned int bit_length, X *compressed_data, X *data, unsigned long length);
 
 // A fast aligned version WARP_SIZE = 32
