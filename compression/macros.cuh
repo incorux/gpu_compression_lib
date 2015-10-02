@@ -17,7 +17,7 @@
 // This depend on _CUDA_ARCH__ number
 
 template <typename T> 
-__device__ __host__ __forceinline__ T SETNPBITS( T *source, T value, unsigned int num_bits, unsigned int bit_start)
+__device__ __host__ __forceinline__ T SETNPBITS( T *source, T value, const unsigned int num_bits, const unsigned int bit_start)
 {
     T mask = NBITSTOMASK(num_bits);
     *source &= ~(mask<<bit_start); // clear space in source

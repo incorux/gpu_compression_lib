@@ -12,6 +12,7 @@ hosts_config = {
         "cadmed":"/home/samba/przymusp/",
         #gpunode2 z PW
         "192.168.137.7":"/home/samba/przymusp/",
+        "192.168.137.6":"/home/samba/przymusp/",
         }
 
 @task

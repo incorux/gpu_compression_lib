@@ -2,8 +2,8 @@ NVCC=nvcc
 
 NVCCLIBSFLAGS = -dc 
 #NVCCFLAGS    = -gencode arch=compute_20,code=sm_20 -gencode arch=compute_30,code=sm_30 -gencode arch=compute_35,code=sm_35
-NVCCFLAGS    = -gencode arch=compute_20,code=sm_20 -gencode arch=compute_35,code=sm_35
-#NVCCFLAGS    = -gencode arch=compute_35,code=sm_35
+#NVCCFLAGS    = -gencode arch=compute_20,code=sm_20 -gencode arch=compute_35,code=sm_35
+NVCCFLAGS    = -gencode arch=compute_35,code=sm_35
 NVCCFLAGS    += --compiler-options=-Wall,-Wno-unused-function -I$(CURDIR) -O3
 
 TOOLS_SRC=$(wildcard tools/*.cu)
