@@ -12,9 +12,21 @@
 #define _unused(x) x __attribute__((unused))
 #define convert_struct(n, s)  struct sgn {signed int x:n;} __attribute__((unused)) s
 
+__inline__ __device__
+int warpAllReduceMax(int val) {
+    int m = val;
+    for (int mask = warpSize/2; mask > 0; mask /= 2) {
+        m = __shfl_xor(val, mask);
+        val = m > val ? m : val;
+    }
+    return val;
+}
+
 //TODO: distinguish between signed/unsigned versions
 
 // This depend on _CUDA_ARCH__ number
+
+
 
 template <typename T> 
 __device__ __host__ __forceinline__ T SETNPBITS( T *source, T value, const unsigned int num_bits, const unsigned int bit_start)
