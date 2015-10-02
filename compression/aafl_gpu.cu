@@ -34,8 +34,8 @@ __global__ void aafl_decompress_gpu (unsigned int *warp_bit_lenght, unsigned lon
     const unsigned long data_id = data_block * CWORD_SIZE(T) + warp_lane;
 
     //TODO: check if shfl propagation is faster
-    unsigned long comp_data_id = warp_bit_lenght[data_id];
-    unsigned int bit_length = warp_position_id[data_id];
+    unsigned long comp_data_id = warp_bit_lenght[data_block];
+    unsigned int bit_length = warp_position_id[data_block];
 
     afl_decompress_base_gpu <T, CWARP_SIZE> (bit_length, comp_data_id, data_id, compressed_data, decompress_data, length);
 }
@@ -44,7 +44,9 @@ __global__ void aafl_decompress_gpu (unsigned int *warp_bit_lenght, unsigned lon
 template <typename T, char CWARP_SIZE>
 __device__  void aafl_compress_base_gpu (unsigned long *compressed_data_register, unsigned int *warp_bit_lenght, unsigned long *warp_position_id, unsigned long data_id, T *data, T *compressed_data, unsigned long length)
 {
-    unsigned long pos_data=data_id;
+
+    unsigned long pos_data= data_id;
+
     unsigned int bit_length = 0, tmp_bit_length;
 
     // Compute bit length for compressed block of data
@@ -67,10 +69,14 @@ __device__  void aafl_compress_base_gpu (unsigned long *compressed_data_register
 
     // leader thread registers memory in global
     unsigned long comp_data_id = 0;
+
+    const unsigned int warp_lane = (threadIdx.x % CWARP_SIZE); 
+    const unsigned long data_block = blockIdx.x * blockDim.x + threadIdx.x - warp_lane;
+
     if (leader == threadIdx.x % 32) {
-        comp_data_id = (unsigned long long int)atomicAdd( (unsigned long long int *)compressed_data_register, (unsigned long long int)(bit_length * CWARP_SIZE * CWORD_SIZE(T)));
-        warp_bit_lenght[data_id] = bit_length;
-        warp_position_id[data_id] = comp_data_id;
+        comp_data_id = (unsigned long long int) atomicAdd( (unsigned long long int *)compressed_data_register, (unsigned long long int)(bit_length * CWARP_SIZE * CWORD_SIZE(T)));
+        warp_bit_lenght[data_block] = bit_length;
+        warp_position_id[data_block] = comp_data_id;
     }
 
     // Propagate in warp position of compressed block

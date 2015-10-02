@@ -6,7 +6,7 @@
 template <typename T, int CWARP_SIZE> class test_delta: public test_afl<T, CWARP_SIZE> {
 
     public: 
-        virtual void setup(int max_size) {
+        virtual void setup(unsigned long max_size) {
             test_afl::setup(max_size);
             this->spoints_count = max_size;
             

@@ -22,7 +22,7 @@ class test_pafl: public test_afl<T, CWARP_SIZE>
             mmCudaMalloc(this->manager, (void **) &this->dev_queue_patch_values, outlier_data_size);
         }
 
-        virtual void setup(int max_size) {
+        virtual void setup(unsigned long max_size) {
             this->max_size = max_size;
             this->cword = sizeof(T) * 8;
             this->data_size = max_size * sizeof(T);
