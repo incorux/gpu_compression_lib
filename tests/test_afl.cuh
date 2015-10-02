@@ -57,7 +57,7 @@ public:
         gpuErrchk(cudaMemcpy(host_data2, dev_data, data_size, cudaMemcpyDeviceToHost));
     }
 
-    virtual void setup(int max_size) {
+    virtual void setup(unsigned long max_size) {
         this->max_size = max_size;
         this->cword = sizeof(T) * 8;
         this->data_size = max_size * sizeof(T);
