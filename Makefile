@@ -41,7 +41,9 @@ $(PROGS): %.out: %.o $(GPU_LIBS) $(CPU_LIBS) $(ALL_LIBS)
 $(TESTS_RUNER): %.out: %.o $(GPU_LIBS) $(CPU_LIBS) $(ALL_LIBS) $(TESTS_OBJ)
 	$(NVCC) $(NVCCFLAGS)  $< $(GPU_LIBS) $(CPU_LIBS) $(ALL_LIBS) $(TESTS_OBJ) -o $@
 
-.SUFFIXES: .cu .out .o
+.SUFFIXES: .cu .cuh .out .o
+
+$(TESTS_OBJ): %.o : %.cu %.cuh 
 
 .cu.o: %.cu %.h %.cuh 
 	$(NVCC) $(NVCCFLAGS) $(NVCCLIBSFLAGS) $< -o $@
