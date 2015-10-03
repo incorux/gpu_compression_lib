@@ -1,6 +1,6 @@
 /*
- *  Catch v1.2.1
- *  Generated: 2015-06-30 18:23:27.961086
+ *  CATCH v1.1 build 1 (master branch)
+ *  Generated: 2015-03-27 18:00:16.346230
  *  ----------------------------------------------------------
  *  This file has been merged from multiple headers. Please don't edit it directly
  *  Copyright (c) 2012 Two Blue Cubes Ltd. All rights reserved.
@@ -12,12 +12,6 @@
 #define TWOBLUECUBES_SINGLE_INCLUDE_CATCH_HPP_INCLUDED
 
 #define TWOBLUECUBES_CATCH_HPP_INCLUDED
-
-#ifdef __clang__
-#    pragma clang system_header
-#elif defined __GNUC__
-#    pragma GCC system_header
-#endif
 
 // #included from: internal/catch_suppress_warnings.h
 
@@ -36,7 +30,6 @@
 #       pragma clang diagnostic ignored "-Wpadded"
 #       pragma clang diagnostic ignored "-Wc++98-compat"
 #       pragma clang diagnostic ignored "-Wc++98-compat-pedantic"
-#       pragma clang diagnostic ignored "-Wswitch-enum"
 #    endif
 #elif defined __GNUC__
 #    pragma GCC diagnostic ignored "-Wvariadic-macros"
@@ -76,34 +69,16 @@
 // #included from: catch_compiler_capabilities.h
 #define TWOBLUECUBES_CATCH_COMPILER_CAPABILITIES_HPP_INCLUDED
 
-// Detect a number of compiler features - mostly C++11/14 conformance - by compiler
-// The following features are defined:
-//
-// CATCH_CONFIG_CPP11_NULLPTR : is nullptr supported?
-// CATCH_CONFIG_CPP11_NOEXCEPT : is noexcept supported?
-// CATCH_CONFIG_CPP11_GENERATED_METHODS : The delete and default keywords for compiler generated methods
-// CATCH_CONFIG_CPP11_IS_ENUM : std::is_enum is supported?
-// CATCH_CONFIG_CPP11_TUPLE : std::tuple is supported
-
-// CATCH_CONFIG_CPP11_OR_GREATER : Is C++11 supported?
-
-// CATCH_CONFIG_VARIADIC_MACROS : are variadic macros supported?
-
-// In general each macro has a _NO_<feature name> form
-// (e.g. CATCH_CONFIG_CPP11_NO_NULLPTR) which disables the feature.
-// Many features, at point of detection, define an _INTERNAL_ macro, so they
-// can be combined, en-mass, with the _NO_ forms later.
-
-// All the C++11 features can be disabled with CATCH_CONFIG_NO_CPP11
+// Much of the following code is based on Boost (1.53)
 
 #ifdef __clang__
 
 #  if __has_feature(cxx_nullptr)
-#    define CATCH_INTERNAL_CONFIG_CPP11_NULLPTR
+#    define CATCH_CONFIG_CPP11_NULLPTR
 #  endif
 
 #  if __has_feature(cxx_noexcept)
-#    define CATCH_INTERNAL_CONFIG_CPP11_NOEXCEPT
+#    define CATCH_CONFIG_CPP11_NOEXCEPT
 #  endif
 
 #endif // __clang__
@@ -112,11 +87,19 @@
 // Borland
 #ifdef __BORLANDC__
 
+#if (__BORLANDC__ > 0x582 )
+//#define CATCH_CONFIG_SFINAE // Not confirmed
+#endif
+
 #endif // __BORLANDC__
 
 ////////////////////////////////////////////////////////////////////////////////
 // EDG
 #ifdef __EDG_VERSION__
+
+#if (__EDG_VERSION__ > 238 )
+//#define CATCH_CONFIG_SFINAE // Not confirmed
+#endif
 
 #endif // __EDG_VERSION__
 
@@ -124,14 +107,31 @@
 // Digital Mars
 #ifdef __DMC__
 
+#if (__DMC__ > 0x840 )
+//#define CATCH_CONFIG_SFINAE // Not confirmed
+#endif
+
 #endif // __DMC__
 
 ////////////////////////////////////////////////////////////////////////////////
 // GCC
 #ifdef __GNUC__
 
+#if __GNUC__ < 3
+
+#if (__GNUC_MINOR__ >= 96 )
+//#define CATCH_CONFIG_SFINAE
+#endif
+
+#elif __GNUC__ >= 3
+
+// #define CATCH_CONFIG_SFINAE // Taking this out completely for now
+
+#endif // __GNUC__ < 3
+
 #if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6 && defined(__GXX_EXPERIMENTAL_CXX0X__) )
-#   define CATCH_INTERNAL_CONFIG_CPP11_NULLPTR
+
+#define CATCH_CONFIG_CPP11_NULLPTR
 #endif
 
 #endif // __GNUC__
@@ -141,12 +141,11 @@
 #ifdef _MSC_VER
 
 #if (_MSC_VER >= 1600)
-#   define CATCH_INTERNAL_CONFIG_CPP11_NULLPTR
+#define CATCH_CONFIG_CPP11_NULLPTR
 #endif
 
-#if (_MSC_VER >= 1900 ) // (VC++ 13 (VS2015))
-#define CATCH_INTERNAL_CONFIG_CPP11_NOEXCEPT
-#define CATCH_INTERNAL_CONFIG_CPP11_GENERATED_METHODS
+#if (_MSC_VER >= 1310 ) // (VC++ 7.0+)
+//#define CATCH_CONFIG_SFINAE // Not confirmed
 #endif
 
 #endif // _MSC_VER
@@ -157,62 +156,21 @@
     ( defined __GNUC__ && __GNUC__ >= 3 ) || \
     ( !defined __cplusplus && __STDC_VERSION__ >= 199901L || __cplusplus >= 201103L )
 
-#define CATCH_INTERNAL_CONFIG_VARIADIC_MACROS
+#ifndef CATCH_CONFIG_NO_VARIADIC_MACROS
+#define CATCH_CONFIG_VARIADIC_MACROS
+#endif
 
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // C++ language feature support
 
-// catch all support for C++11
-#if (__cplusplus >= 201103L)
-
+// detect language version:
+#if (__cplusplus == 201103L)
+#  define CATCH_CPP11
 #  define CATCH_CPP11_OR_GREATER
-
-#  if !defined(CATCH_INTERNAL_CONFIG_CPP11_NULLPTR)
-#    define CATCH_INTERNAL_CONFIG_CPP11_NULLPTR
-#  endif
-
-#  ifndef CATCH_INTERNAL_CONFIG_CPP11_NOEXCEPT
-#    define CATCH_INTERNAL_CONFIG_CPP11_NOEXCEPT
-#  endif
-
-#  ifndef CATCH_INTERNAL_CONFIG_CPP11_GENERATED_METHODS
-#    define CATCH_INTERNAL_CONFIG_CPP11_GENERATED_METHODS
-#  endif
-
-#  ifndef CATCH_INTERNAL_CONFIG_CPP11_IS_ENUM
-#    define CATCH_INTERNAL_CONFIG_CPP11_IS_ENUM
-#  endif
-
-#  ifndef CATCH_INTERNAL_CONFIG_CPP11_TUPLE
-#    define CATCH_INTERNAL_CONFIG_CPP11_TUPLE
-#  endif
-
-#  ifndef CATCH_INTERNAL_CONFIG_VARIADIC_MACROS
-#    define CATCH_INTERNAL_CONFIG_VARIADIC_MACROS
-#  endif
-
-#endif // __cplusplus >= 201103L
-
-// Now set the actual defines based on the above + anything the user has configured
-#if defined(CATCH_INTERNAL_CONFIG_CPP11_NULLPTR) && !defined(CATCH_CONFIG_CPP11_NO_NULLPTR) && !defined(CATCH_CONFIG_CPP11_NULLPTR) && !defined(CATCH_CONFIG_NO_CPP11)
-#   define CATCH_CONFIG_CPP11_NULLPTR
-#endif
-#if defined(CATCH_INTERNAL_CONFIG_CPP11_NOEXCEPT) && !defined(CATCH_CONFIG_CPP11_NO_NOEXCEPT) && !defined(CATCH_CONFIG_CPP11_NOEXCEPT) && !defined(CATCH_CONFIG_NO_CPP11)
-#   define CATCH_CONFIG_CPP11_NOEXCEPT
-#endif
-#if defined(CATCH_INTERNAL_CONFIG_CPP11_GENERATED_METHODS) && !defined(CATCH_CONFIG_CPP11_NO_GENERATED_METHODS) && !defined(CATCH_CONFIG_CPP11_GENERATED_METHODS) && !defined(CATCH_CONFIG_NO_CPP11)
-#   define CATCH_CONFIG_CPP11_GENERATED_METHODS
-#endif
-#if defined(CATCH_INTERNAL_CONFIG_CPP11_IS_ENUM) && !defined(CATCH_CONFIG_CPP11_NO_IS_ENUM) && !defined(CATCH_CONFIG_CPP11_IS_ENUM) && !defined(CATCH_CONFIG_NO_CPP11)
-#   define CATCH_CONFIG_CPP11_IS_ENUM
-#endif
-#if defined(CATCH_INTERNAL_CONFIG_CPP11_TUPLE) && !defined(CATCH_CONFIG_CPP11_NO_TUPLE) && !defined(CATCH_CONFIG_CPP11_TUPLE) && !defined(CATCH_CONFIG_NO_CPP11)
-#   define CATCH_CONFIG_CPP11_TUPLE
-#endif
-#if defined(CATCH_INTERNAL_CONFIG_VARIADIC_MACROS) && !defined(CATCH_CONFIG_NO_VARIADIC_MACROS) && !defined(CATCH_CONFIG_VARIADIC_MACROS)
-#define CATCH_CONFIG_VARIADIC_MACROS
+#elif (__cplusplus >= 201103L)
+#  define CATCH_CPP11_OR_GREATER
 #endif
 
 // noexcept support:
@@ -227,7 +185,7 @@
 namespace Catch {
 
     class NonCopyable {
-#ifdef CATCH_CONFIG_CPP11_GENERATED_METHODS
+#ifdef CATCH_CPP11_OR_GREATER
         NonCopyable( NonCopyable const& )              = delete;
         NonCopyable( NonCopyable && )                  = delete;
         NonCopyable& operator = ( NonCopyable const& ) = delete;
@@ -290,7 +248,7 @@ namespace Catch {
         SourceLineInfo();
         SourceLineInfo( char const* _file, std::size_t _line );
         SourceLineInfo( SourceLineInfo const& other );
-#  ifdef CATCH_CONFIG_CPP11_GENERATED_METHODS
+#  ifdef CATCH_CPP11_OR_GREATER
         SourceLineInfo( SourceLineInfo && )                  = default;
         SourceLineInfo& operator = ( SourceLineInfo const& ) = default;
         SourceLineInfo& operator = ( SourceLineInfo && )     = default;
@@ -679,11 +637,11 @@ namespace Catch {
 
     // ResultDisposition::Flags enum
     struct ResultDisposition { enum Flags {
-        Normal = 0x01,
+        Normal = 0x00,
 
-        ContinueOnFailure = 0x02,   // Failures fail test, but execution continues
-        FalseTest = 0x04,           // Prefix expression with !
-        SuppressFail = 0x08         // Failures are reported but do not fail the test
+        ContinueOnFailure = 0x01,   // Failures fail test, but execution continues
+        FalseTest = 0x02,           // Prefix expression with !
+        SuppressFail = 0x04         // Failures are reported but do not fail the test
     }; };
 
     inline ResultDisposition::Flags operator | ( ResultDisposition::Flags lhs, ResultDisposition::Flags rhs ) {
@@ -731,7 +689,7 @@ namespace Catch {
         AssertionResult();
         AssertionResult( AssertionInfo const& info, AssertionResultData const& data );
         ~AssertionResult();
-#  ifdef CATCH_CONFIG_CPP11_GENERATED_METHODS
+#  ifdef CATCH_CPP11_OR_GREATER
          AssertionResult( AssertionResult const& )              = default;
          AssertionResult( AssertionResult && )                  = default;
          AssertionResult& operator = ( AssertionResult const& ) = default;
@@ -787,8 +745,8 @@ namespace Catch {
                         ResultDisposition::Flags resultDisposition );
 
         template<typename T>
-        ExpressionLhs<T const&> operator <= ( T const& operand );
-        ExpressionLhs<bool> operator <= ( bool value );
+        ExpressionLhs<T const&> operator->* ( T const& operand );
+        ExpressionLhs<bool> operator->* ( bool value );
 
         template<typename T>
         ResultBuilder& operator << ( T const& value ) {
@@ -1011,6 +969,40 @@ namespace Internal {
 // #included from: catch_tostring.h
 #define TWOBLUECUBES_CATCH_TOSTRING_H_INCLUDED
 
+// #included from: catch_sfinae.hpp
+#define TWOBLUECUBES_CATCH_SFINAE_HPP_INCLUDED
+
+// Try to detect if the current compiler supports SFINAE
+
+namespace Catch {
+
+    struct TrueType {
+        static const bool value = true;
+        typedef void Enable;
+        char sizer[1];
+    };
+    struct FalseType {
+        static const bool value = false;
+        typedef void Disable;
+        char sizer[2];
+    };
+
+#ifdef CATCH_CONFIG_SFINAE
+
+    template<bool> struct NotABooleanExpression;
+
+    template<bool c> struct If : NotABooleanExpression<c> {};
+    template<> struct If<true> : TrueType {};
+    template<> struct If<false> : FalseType {};
+
+    template<int size> struct SizedIf;
+    template<> struct SizedIf<sizeof(TrueType)> : TrueType {};
+    template<> struct SizedIf<sizeof(FalseType)> : FalseType {};
+
+#endif // CATCH_CONFIG_SFINAE
+
+} // end namespace Catch
+
 #include <sstream>
 #include <iomanip>
 #include <limits>
@@ -1063,11 +1055,8 @@ inline id performOptionalSelector( id obj, SEL sel ) {
 
 #endif
 
-#ifdef CATCH_CONFIG_CPP11_TUPLE
+#ifdef CATCH_CPP11_OR_GREATER
 #include <tuple>
-#endif
-
-#ifdef CATCH_CONFIG_CPP11_IS_ENUM
 #include <type_traits>
 #endif
 
@@ -1109,12 +1098,31 @@ namespace Detail {
 
     extern std::string unprintableString;
 
+// SFINAE is currently disabled by default for all compilers.
+// If the non SFINAE version of IsStreamInsertable is ambiguous for you
+// and your compiler supports SFINAE, try #defining CATCH_CONFIG_SFINAE
+#ifdef CATCH_CONFIG_SFINAE
+
+    template<typename T>
+    class IsStreamInsertableHelper {
+        template<int N> struct TrueIfSizeable : TrueType {};
+
+        template<typename T2>
+        static TrueIfSizeable<sizeof((*(std::ostream*)0) << *((T2 const*)0))> dummy(T2*);
+        static FalseType dummy(...);
+
+    public:
+        typedef SizedIf<sizeof(dummy((T*)0))> type;
+    };
+
+    template<typename T>
+    struct IsStreamInsertable : IsStreamInsertableHelper<T>::type {};
+
+#else
+
     struct BorgType {
         template<typename T> BorgType( T const& );
     };
-
-    struct TrueType { char sizer[1]; };
-    struct FalseType { char sizer[2]; };
 
     TrueType& testStreamable( std::ostream& );
     FalseType testStreamable( FalseType );
@@ -1128,7 +1136,9 @@ namespace Detail {
         enum { value = sizeof( testStreamable(s << t) ) == sizeof( TrueType ) };
     };
 
-#if defined(CATCH_CONFIG_CPP11_IS_ENUM)
+#endif
+
+#if defined(CATCH_CPP11_OR_GREATER)
     template<typename T,
              bool IsEnum = std::is_enum<T>::value
              >
@@ -1150,7 +1160,7 @@ namespace Detail {
 #endif
     template<bool C>
     struct StringMakerBase {
-#if defined(CATCH_CONFIG_CPP11_IS_ENUM)
+#if defined(CATCH_CPP11_OR_GREATER)
         template<typename T>
         static std::string convert( T const& v )
         {
@@ -1223,7 +1233,7 @@ std::string toString( std::vector<T,Allocator> const& v ) {
     return Detail::rangeToString( v.begin(), v.end() );
 }
 
-#ifdef CATCH_CONFIG_CPP11_TUPLE
+#ifdef CATCH_CPP11_OR_GREATER
 
 // toString for tuples
 namespace TupleDetail {
@@ -1263,7 +1273,7 @@ struct StringMaker<std::tuple<Types...>> {
         return os.str();
     }
 };
-#endif // CATCH_CONFIG_CPP11_TUPLE
+#endif
 
 namespace Detail {
     template<typename T>
@@ -1308,13 +1318,13 @@ namespace Catch {
 template<typename T>
 class ExpressionLhs {
     ExpressionLhs& operator = ( ExpressionLhs const& );
-#  ifdef CATCH_CONFIG_CPP11_GENERATED_METHODS
+#  ifdef CATCH_CPP11_OR_GREATER
     ExpressionLhs& operator = ( ExpressionLhs && ) = delete;
 #  endif
 
 public:
     ExpressionLhs( ResultBuilder& rb, T lhs ) : m_rb( rb ), m_lhs( lhs ) {}
-#  ifdef CATCH_CONFIG_CPP11_GENERATED_METHODS
+#  ifdef CATCH_CPP11_OR_GREATER
     ExpressionLhs( ExpressionLhs const& ) = default;
     ExpressionLhs( ExpressionLhs && )     = default;
 #  endif
@@ -1395,11 +1405,11 @@ private:
 namespace Catch {
 
     template<typename T>
-    inline ExpressionLhs<T const&> ResultBuilder::operator <= ( T const& operand ) {
+    inline ExpressionLhs<T const&> ResultBuilder::operator->* ( T const& operand ) {
         return ExpressionLhs<T const&>( *this, operand );
     }
 
-    inline ExpressionLhs<bool> ResultBuilder::operator <= ( bool value ) {
+    inline ExpressionLhs<bool> ResultBuilder::operator->* ( bool value ) {
         return ExpressionLhs<bool>( *this, value );
     }
 
@@ -1571,7 +1581,7 @@ namespace Catch {
     do { \
         Catch::ResultBuilder __catchResult( macroName, CATCH_INTERNAL_LINEINFO, #expr, resultDisposition ); \
         try { \
-            ( __catchResult <= expr ).endExpression(); \
+            ( __catchResult->*expr ).endExpression(); \
         } \
         catch( ... ) { \
             __catchResult.useActiveException( Catch::ResultDisposition::Normal ); \
@@ -3504,7 +3514,7 @@ namespace Clara {
         template<typename ConfigT>
         struct IArgFunction {
             virtual ~IArgFunction() {}
-#  ifdef CATCH_CONFIG_CPP11_GENERATED_METHODS
+#  ifdef CATCH_CPP11_OR_GREATER
             IArgFunction()                      = default;
             IArgFunction( IArgFunction const& ) = default;
 #  endif
@@ -4595,7 +4605,7 @@ namespace Catch
         }
         virtual ~AssertionStats();
 
-#  ifdef CATCH_CONFIG_CPP11_GENERATED_METHODS
+#  ifdef CATCH_CPP11_OR_GREATER
         AssertionStats( AssertionStats const& )              = default;
         AssertionStats( AssertionStats && )                  = default;
         AssertionStats& operator = ( AssertionStats const& ) = default;
@@ -4618,7 +4628,7 @@ namespace Catch
             missingAssertions( _missingAssertions )
         {}
         virtual ~SectionStats();
-#  ifdef CATCH_CONFIG_CPP11_GENERATED_METHODS
+#  ifdef CATCH_CPP11_OR_GREATER
         SectionStats( SectionStats const& )              = default;
         SectionStats( SectionStats && )                  = default;
         SectionStats& operator = ( SectionStats const& ) = default;
@@ -4645,7 +4655,7 @@ namespace Catch
         {}
         virtual ~TestCaseStats();
 
-#  ifdef CATCH_CONFIG_CPP11_GENERATED_METHODS
+#  ifdef CATCH_CPP11_OR_GREATER
         TestCaseStats( TestCaseStats const& )              = default;
         TestCaseStats( TestCaseStats && )                  = default;
         TestCaseStats& operator = ( TestCaseStats const& ) = default;
@@ -4673,7 +4683,7 @@ namespace Catch
         {}
         virtual ~TestGroupStats();
 
-#  ifdef CATCH_CONFIG_CPP11_GENERATED_METHODS
+#  ifdef CATCH_CPP11_OR_GREATER
         TestGroupStats( TestGroupStats const& )              = default;
         TestGroupStats( TestGroupStats && )                  = default;
         TestGroupStats& operator = ( TestGroupStats const& ) = default;
@@ -4695,7 +4705,7 @@ namespace Catch
         {}
         virtual ~TestRunStats();
 
-#  ifndef CATCH_CONFIG_CPP11_GENERATED_METHODS
+#  ifndef CATCH_CPP11_OR_GREATER
         TestRunStats( TestRunStats const& _other )
         :   runInfo( _other.runInfo ),
             totals( _other.totals ),
@@ -4950,15 +4960,32 @@ namespace SectionTracking {
 
         RunState runState() const { return m_runState; }
 
-        TrackedSection* findChild( std::string const& childName );
-        TrackedSection* acquireChild( std::string const& childName );
-
+        TrackedSection* findChild( std::string const& childName ) {
+            TrackedSections::iterator it = m_children.find( childName );
+            return it != m_children.end()
+                ? &it->second
+                : NULL;
+        }
+        TrackedSection* acquireChild( std::string const& childName ) {
+            if( TrackedSection* child = findChild( childName ) )
+                return child;
+            m_children.insert( std::make_pair( childName, TrackedSection( childName, this ) ) );
+            return findChild( childName );
+        }
         void enter() {
             if( m_runState == NotStarted )
                 m_runState = Executing;
         }
-        void leave();
-
+        void leave() {
+            for( TrackedSections::const_iterator it = m_children.begin(), itEnd = m_children.end();
+                    it != itEnd;
+                    ++it )
+                if( it->second.runState() != Completed ) {
+                    m_runState = ExecutingChildren;
+                    return;
+                }
+            m_runState = Completed;
+        }
         TrackedSection* getParent() {
             return m_parent;
         }
@@ -4971,30 +4998,8 @@ namespace SectionTracking {
         RunState m_runState;
         TrackedSections m_children;
         TrackedSection* m_parent;
-    };
 
-    inline TrackedSection* TrackedSection::findChild( std::string const& childName ) {
-        TrackedSections::iterator it = m_children.find( childName );
-        return it != m_children.end()
-            ? &it->second
-            : NULL;
-    }
-    inline TrackedSection* TrackedSection::acquireChild( std::string const& childName ) {
-        if( TrackedSection* child = findChild( childName ) )
-            return child;
-        m_children.insert( std::make_pair( childName, TrackedSection( childName, this ) ) );
-        return findChild( childName );
-    }
-    inline void TrackedSection::leave() {
-        for( TrackedSections::const_iterator it = m_children.begin(), itEnd = m_children.end();
-                it != itEnd;
-                ++it )
-            if( it->second.runState() != Completed ) {
-                m_runState = ExecutingChildren;
-                return;
-            }
-        m_runState = Completed;
-    }
+    };
 
     class TestCaseTracker {
     public:
@@ -5478,19 +5483,18 @@ namespace Catch {
     struct Version {
         Version(    unsigned int _majorVersion,
                     unsigned int _minorVersion,
-                    unsigned int _patchNumber,
-                    std::string const& _branchName,
-                    unsigned int _buildNumber );
+                    unsigned int _buildNumber,
+                    char const* const _branchName )
+        :   majorVersion( _majorVersion ),
+            minorVersion( _minorVersion ),
+            buildNumber( _buildNumber ),
+            branchName( _branchName )
+        {}
 
         unsigned int const majorVersion;
         unsigned int const minorVersion;
-        unsigned int const patchNumber;
-
-        // buildNumber is only used if branchName is not null
-        std::string const branchName;
         unsigned int const buildNumber;
-
-        friend std::ostream& operator << ( std::ostream& os, Version const& version );
+        char const* const branchName;
 
     private:
         void operator=( Version const& );
@@ -5610,7 +5614,12 @@ namespace Catch {
         }
 
         void showHelp( std::string const& processName ) {
-            Catch::cout() << "\nCatch v" << libraryVersion << "\n";
+            Catch::cout() << "\nCatch v"    << libraryVersion.majorVersion << "."
+                                        << libraryVersion.minorVersion << " build "
+                                        << libraryVersion.buildNumber;
+            if( libraryVersion.branchName != std::string( "master" ) )
+                Catch::cout() << " (" << libraryVersion.branchName << " branch)";
+            Catch::cout() << "\n";
 
             m_cli.usage( Catch::cout(), processName );
             Catch::cout() << "For more detail usage please see the project docs\n" << std::endl;
@@ -5627,10 +5636,9 @@ namespace Catch {
             catch( std::exception& ex ) {
                 {
                     Colour colourGuard( Colour::Red );
-                    Catch::cerr()
-                        << "\nError(s) in input:\n"
-                        << Text( ex.what(), TextAttributes().setIndent(2) )
-                        << "\n\n";
+                    Catch::cerr()   << "\nError(s) in input:\n"
+                                << Text( ex.what(), TextAttributes().setIndent(2) )
+                                << "\n\n";
                 }
                 m_cli.usage( Catch::cout(), m_configData.processName );
                 return (std::numeric_limits<int>::max)();
@@ -6742,33 +6750,8 @@ namespace Catch {
 
 namespace Catch {
 
-    Version::Version
-        (   unsigned int _majorVersion,
-            unsigned int _minorVersion,
-            unsigned int _patchNumber,
-            std::string const& _branchName,
-            unsigned int _buildNumber )
-    :   majorVersion( _majorVersion ),
-        minorVersion( _minorVersion ),
-        patchNumber( _patchNumber ),
-        branchName( _branchName ),
-        buildNumber( _buildNumber )
-    {}
-
-    std::ostream& operator << ( std::ostream& os, Version const& version ) {
-        os  << version.majorVersion << "."
-            << version.minorVersion << "."
-            << version.patchNumber;
-
-        if( !version.branchName.empty() ) {
-            os  << "-" << version.branchName
-                << "." << version.buildNumber;
-        }
-        return os;
-    }
-
-    Version libraryVersion( 1, 2, 1, "", 0 );
-
+    // These numbers are maintained by a script
+    Version libraryVersion( 1, 1, 1, "master" );
 }
 
 // #included from: catch_message.hpp
@@ -7288,17 +7271,19 @@ std::string toString( wchar_t* const value )
 
 std::string toString( int value ) {
     std::ostringstream oss;
-    oss << value;
-    if( value >= 255 )
-        oss << " (0x" << std::hex << value << ")";
+    if( value > 8192 )
+        oss << "0x" << std::hex << value;
+    else
+        oss << value;
     return oss.str();
 }
 
 std::string toString( unsigned long value ) {
     std::ostringstream oss;
-    oss << value;
-    if( value >= 255 )
-        oss << " (0x" << std::hex << value << ")";
+    if( value > 8192 )
+        oss << "0x" << std::hex << value;
+    else
+        oss << value;
     return oss.str();
 }
 
@@ -7429,7 +7414,7 @@ namespace Catch {
         if( !result.isOk() ) {
             if( getCurrentContext().getConfig()->shouldDebugBreak() )
                 m_shouldDebugBreak = true;
-            if( getCurrentContext().getRunner()->aborting() || (m_assertionInfo.resultDisposition & ResultDisposition::Normal) )
+            if( getCurrentContext().getRunner()->aborting() || m_assertionInfo.resultDisposition == ResultDisposition::Normal )
                 m_shouldThrow = true;
         }
     }
@@ -7911,6 +7896,27 @@ namespace Catch {
             while( !m_tags.empty() )
                 endElement();
         }
+
+//#  ifndef CATCH_CPP11_OR_GREATER
+//        XmlWriter& operator = ( XmlWriter const& other ) {
+//            XmlWriter temp( other );
+//            swap( temp );
+//            return *this;
+//        }
+//#  else
+//        XmlWriter( XmlWriter const& )              = default;
+//        XmlWriter( XmlWriter && )                  = default;
+//        XmlWriter& operator = ( XmlWriter const& ) = default;
+//        XmlWriter& operator = ( XmlWriter && )     = default;
+//#  endif
+//
+//        void swap( XmlWriter& other ) {
+//            std::swap( m_tagIsOpen, other.m_tagIsOpen );
+//            std::swap( m_needsNewline, other.m_needsNewline );
+//            std::swap( m_tags, other.m_tags );
+//            std::swap( m_indent, other.m_indent );
+//            std::swap( m_os, other.m_os );
+//        }
 
         XmlWriter& startElement( std::string const& name ) {
             ensureTagClosed();
@@ -8694,7 +8700,12 @@ namespace Catch {
             stream  << "\n" << getLineOfChars<'~'>() << "\n";
             Colour colour( Colour::SecondaryText );
             stream  << currentTestRunInfo->name
-                    << " is a Catch v"  << libraryVersion << " host application.\n"
+                    << " is a Catch v"  << libraryVersion.majorVersion << "."
+                    << libraryVersion.minorVersion << " b"
+                    << libraryVersion.buildNumber;
+            if( libraryVersion.branchName != std::string( "master" ) )
+                stream << " (" << libraryVersion.branchName << ")";
+            stream  << " host application.\n"
                     << "Run with -? for options\n\n";
 
             if( m_config->rngSeed() != 0 )

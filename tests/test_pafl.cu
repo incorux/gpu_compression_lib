@@ -9,3 +9,11 @@ TEST_CASE( NAME " test set", "[" NAME "]" ) {\
 
 RUN_PTEST("PAFL", test_pafl, 32);
 RUN_PTEST("PFL", test_pafl, 1);
+
+#define RUN_PERF_TEST(NAME, CNAME, PARAM)\
+TEST_CASE( NAME " performance test", "[" NAME "][PERF][hide]" ) {\
+    SECTION("int: PERF data set")   {CNAME <int, PARAM> (0.1).run(PERF_DATA_SET, true);}\
+}
+
+RUN_PERF_TEST("PAFL", test_pafl, 32);
+RUN_PERF_TEST("PFL", test_pafl, 1);

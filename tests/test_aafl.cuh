@@ -17,6 +17,7 @@ class test_aafl: public test_afl<T, CWARP_SIZE>
             mmCudaMalloc(this->manager, (void **) &this->dev_data, this->data_size);
 
             mmCudaMalloc(this->manager, (void **) &this->dev_data_compressed_data_register, sizeof(long));
+            cudaMemset(this->dev_data_compressed_data_register, 0, sizeof(long)); 
             mmCudaMalloc(this->manager, (void **) &this->dev_data_bit_lenght, compression_blocks_count * sizeof(unsigned int));
             mmCudaMalloc(this->manager, (void **) &this->dev_data_position_id, compression_blocks_count * sizeof(unsigned long));
         }
@@ -26,7 +27,7 @@ class test_aafl: public test_afl<T, CWARP_SIZE>
             this->cword = sizeof(T) * 8;
             this->data_size = max_size * sizeof(T);
 
-            this->compression_blocks_count = max_size / CWARP_SIZE + 1;
+            this->compression_blocks_count = (max_size < this->cword  ? this->cword : max_size) / CWARP_SIZE + 1;
 
             // for size less then cword we actually will need more space than original data
             this->compressed_data_size = (max_size < this->cword  ? this->cword : max_size) * sizeof(T);
@@ -39,7 +40,7 @@ class test_aafl: public test_afl<T, CWARP_SIZE>
         // Clean up before compression
         virtual void cleanBeforeCompress() {
             cudaMemset(this->dev_out, 0, this->data_size); 
-            cudaMemset(this->dev_data_compressed_data_register, 0, sizeof(int)); 
+            cudaMemset(this->dev_data_compressed_data_register, 0, sizeof(long)); 
 
             cudaMemset(this->dev_data_bit_lenght, 0, compression_blocks_count * sizeof(unsigned int));
             cudaMemset(this->dev_data_position_id, 0, compression_blocks_count * sizeof(unsigned long));

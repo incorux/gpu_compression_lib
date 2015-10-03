@@ -1,4 +1,5 @@
 #include "aafl_gpu.cuh"
+#include <stdio.h>
 
 template < typename T, char CWARP_SIZE >
 __host__ void run_aafl_compress_gpu(unsigned long *compressed_data_register, unsigned int *warp_bit_lenght, unsigned long *warp_position_id, T *data, T *compressed_data, unsigned long length)
@@ -34,8 +35,8 @@ __global__ void aafl_decompress_gpu (unsigned int *warp_bit_lenght, unsigned lon
     const unsigned long data_id = data_block * CWORD_SIZE(T) + warp_lane;
 
     //TODO: check if shfl propagation is faster
-    unsigned long comp_data_id = warp_bit_lenght[data_block];
-    unsigned int bit_length = warp_position_id[data_block];
+    unsigned long comp_data_id = warp_position_id[data_block] + warp_lane;
+    unsigned int bit_length = warp_bit_lenght[data_block];
 
     afl_decompress_base_gpu <T, CWARP_SIZE> (bit_length, comp_data_id, data_id, compressed_data, decompress_data, length);
 }
@@ -53,15 +54,14 @@ __device__  void aafl_compress_base_gpu (unsigned long *compressed_data_register
     for (unsigned int i = 0; i < CWORD_SIZE(T) && pos_data < length; ++i) 
     {
         tmp_bit_length = BITLEN(data[pos_data]);
-
-        if (bit_length < tmp_bit_length) 
-            bit_length = tmp_bit_length;
-
+        bit_length = max(bit_length, tmp_bit_length);
         pos_data += CWARP_SIZE;
     }
 
+    /*printf("%d %u %u \n", threadIdx.x, bit_length, tmp_bit_length );*/
+
     // Warp vote for maximum bit length
-    bit_length = warpAllReduceMax(bit_length);
+    bit_length = warpAllReduceMax(bit_length) + 1;
 
     // Select leader
     int mask = __ballot(1);  // mask of active lanes
@@ -74,13 +74,16 @@ __device__  void aafl_compress_base_gpu (unsigned long *compressed_data_register
     const unsigned long data_block = blockIdx.x * blockDim.x + threadIdx.x - warp_lane;
 
     if (leader == threadIdx.x % 32) {
-        comp_data_id = (unsigned long long int) atomicAdd( (unsigned long long int *)compressed_data_register, (unsigned long long int)(bit_length * CWARP_SIZE * CWORD_SIZE(T)));
+        comp_data_id = (unsigned long long int) atomicAdd( (unsigned long long int *)compressed_data_register, (unsigned long long int)(bit_length * CWARP_SIZE ));
+        /*printf("%d %ld %ld\n", threadIdx.x, data_block, length);*/
         warp_bit_lenght[data_block] = bit_length;
         warp_position_id[data_block] = comp_data_id;
     }
 
     // Propagate in warp position of compressed block
     comp_data_id = warpAllReduceMax(comp_data_id);
+    comp_data_id += warp_lane;
+    /*printf("%d %u %ld \n", threadIdx.x, bit_length, comp_data_id );*/
 
     // Compress using AFL algorithm
     afl_compress_base_gpu <T, CWARP_SIZE> (bit_length, data_id, comp_data_id, data, compressed_data, length);

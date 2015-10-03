@@ -14,11 +14,18 @@
 
 __inline__ __device__
 int warpAllReduceMax(int val) {
-    int m = val;
-    for (int mask = warpSize/2; mask > 0; mask /= 2) {
-        m = __shfl_xor(val, mask);
-        val = m > val ? m : val;
-    }
+
+    val = max(val, __shfl_xor(val,16));
+    val = max(val, __shfl_xor(val, 8));
+    val = max(val, __shfl_xor(val, 4));
+    val = max(val, __shfl_xor(val, 2));
+    val = max(val, __shfl_xor(val, 1));
+
+    /*int m = val;*/
+    /*for (int mask = warpSize/2; mask > 0; mask /= 2) {*/
+        /*m = __shfl_xor(val, mask);*/
+        /*val = m > val ? m : val;*/
+    /*}*/
     return val;
 }
 
@@ -142,7 +149,43 @@ __device__ __host__ __forceinline__ unsigned int BITLEN(unsigned int word)
     while (word >>= 1) 
       ret++;
 #endif
-   return ret;
+   return ret > 64 ? 0 : ret;
+}
+
+__device__ __host__ __forceinline__ unsigned int BITLEN(unsigned long word) 
+{ 
+    unsigned int ret=0; 
+#if __CUDA_ARCH__ > 200 
+    asm volatile ("bfind.u64 %0, %1;" : "=r"(ret) : "l"(word));
+#else
+    while (word >>= 1) 
+      ret++;
+#endif
+   return ret > 64 ? 0 : ret;
+}
+
+__device__ __host__ __forceinline__ unsigned int BITLEN(int word) 
+{ 
+    unsigned int ret=0; 
+#if __CUDA_ARCH__ > 200 
+    asm volatile ("bfind.s32 %0, %1;" : "=r"(ret) : "r"(word));
+#else
+    while (word >>= 1) 
+      ret++;
+#endif
+   return ret > 64 ? 0 : ret;
+}
+
+__device__ __host__ __forceinline__ unsigned int BITLEN(long word) 
+{ 
+    unsigned int ret=0; 
+#if __CUDA_ARCH__ > 200 
+    asm volatile ("bfind.s64 %0, %1;" : "=r"(ret) : "l"(word));
+#else
+    while (word >>= 1) 
+      ret++;
+#endif
+   return ret > 64 ? 0 : ret;
 }
 
 __host__ __device__
