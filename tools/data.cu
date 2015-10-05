@@ -4,6 +4,7 @@
 static unsigned long __xorshf96_x=123456789, __xorshf96_y=362436069, __xorshf96_z=521288629;
 
 unsigned long xorshf96(void) {          //period 2^96-1
+// This is only for test purposes so it is optimized for speed (true randomness is not needed)
     unsigned long t;
         __xorshf96_x ^= __xorshf96_x << 16;
         __xorshf96_x ^= __xorshf96_x >> 5;
@@ -16,7 +17,6 @@ unsigned long xorshf96(void) {          //period 2^96-1
 
         return __xorshf96_z;
 }
-// This is only for test purposes so it is optimized for speed (true randomness is not needed)
 
 template <typename T>
 void big_random_block( unsigned long size, int limit_bits, T *data) 
