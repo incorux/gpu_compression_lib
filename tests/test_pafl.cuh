@@ -1,9 +1,10 @@
 #ifndef TEST_PAFL_CUH_YCIJ79CD
 #define TEST_PAFL_CUH_YCIJ79CD
-#include "test_afl.cuh"
+#include "test_base.cuh"
+#include "compression/pafl_gpu.cuh"
 
 template <typename T, int CWARP_SIZE> 
-class test_pafl: public test_afl<T, CWARP_SIZE> 
+class test_pafl: public test_base<T, CWARP_SIZE> 
 {
     public: 
         virtual void allocateMemory() {
