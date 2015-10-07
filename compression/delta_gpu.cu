@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 template <typename T>
-__global__ void delta_compress_gpu (T *data, T *compressed_data, T *spoints, unsigned long length, unsigned long spoints_length) 
+__global__ void delta_compress_gpu (T *data, T *compressed_data, T *spoints, unsigned int bit_length, unsigned long length, unsigned long spoints_length) 
 {
     int tid = ((blockIdx.x * blockDim.x) + threadIdx.x);
     int laneId = threadIdx.x & 0x1f;
@@ -74,3 +74,7 @@ __global__ void delta_decompress_gpu (T *compressed_data, T *spoints, T *data, u
         if (lane_id == 0) value=laneZeroValue + value;
     }
 }
+
+template __global__ void delta_compress_gpu <int> (int *data, int *compressed_data, int *spoints, unsigned int bit_length, unsigned long length, unsigned long spoints_length);
+
+
