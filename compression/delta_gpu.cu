@@ -15,7 +15,7 @@ __global__ void delta_compress_gpu (T *data, T *compressed_data, T *spoints, uns
     char neighborId = laneId - 1;
 
     //TODO: add if data index in range
-    value1 = data[tid];
+    value1 = laneId; //data[tid];
     zeroLaneValue = value1;
 
     if (laneId == 0)  {
@@ -25,26 +25,26 @@ __global__ void delta_compress_gpu (T *data, T *compressed_data, T *spoints, uns
 
     int ret = 0;
 
-    for (int i = 1;  i < 32; ++ i)
+    for (int i = 1;  i < 2; ++ i)
     {
         value2 = __shfl( value1, neighborId, 32); // Get previous value from neighborId
 
         if (laneId == 0)
         {
-            printf("Thread %d final value = %d zeroLaneValue %d, value1 %d\n", threadIdx.x, zeroLaneValue - value1, zeroLaneValue, value1);
             ret = zeroLaneValue - value1;
             zeroLaneValue = value2;
+            printf("Thread %d final value = %d zeroLaneValue %d, value1 %d\n", threadIdx.x, zeroLaneValue - value1, zeroLaneValue, value1);
         } else {
             ret = value2 - value1;
             printf("Thread %d final value = %d\n", threadIdx.x, value2 - value1);
         }
 
-        value1 = data[tid + i * 32]; 
+        value1 = laneId + i; //data[tid + i * 32]; 
 
-        if (ret != 1)
-        {
-            printf("Error %d ret %d\n", threadIdx.x, ret);
-        }
+        /* if (ret != 1) */
+        /* { */
+        /*     printf("Error %d ret %d\n", threadIdx.x, ret); */
+        /* } */
     }
 }
 

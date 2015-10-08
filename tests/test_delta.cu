@@ -1,7 +1,7 @@
 #include "test_delta.cuh"
 #include "config.cuh"
 
-#define RUN_TEST(NAME, CNAME, PARAM)\
+#define RUN_TEST_DELTA(NAME, CNAME, PARAM)\
 TEST_CASE( NAME " test set", "[" NAME "]" ) {\
     SECTION("int: SMALL ALIGNED data set")   {CNAME <int, PARAM> ().run(SMALL_ALIGNED_DATA_SET);}\
 }
@@ -13,7 +13,7 @@ TEST_CASE( NAME " test set", "[" NAME "]" ) {\
     /* SECTION("long: MEDIUM data set")  {CNAME <long, PARAM> ().run(MEDIUM_DATA_SET);}\ */
 /* } */
 
-RUN_TEST("DELTA_AFL", test_delta, 32)
+RUN_TEST_DELTA("DELTA_AFL", test_delta, 32)
 
 
 /* TEST_CASE( " DELTA test set", "[DELTA]" ) { */

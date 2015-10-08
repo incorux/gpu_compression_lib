@@ -8,9 +8,9 @@ template <typename T> void big_random_block_with_outliers ( unsigned long size, 
 
 template <typename T> int compare_arrays ( T *in1, T *in2, unsigned long size);
 
-#define DEBUG 0
+#define DEBUG_DATA 0
 
-#ifdef DEBUG
+#ifdef DEBUG_DATA
 # define DPRINT(x) printf x
 #else
 # define DPRINT(x) do {} while (0)

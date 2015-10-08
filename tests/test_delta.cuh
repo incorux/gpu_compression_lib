@@ -9,6 +9,7 @@ class test_delta: public test_base<T, CWARP_SIZE> {
         virtual void setup(unsigned long max_size) {
             test_base <T,CWARP_SIZE>::setup(max_size);
             this->spoints_count = max_size;
+            this->cword = 2;
         }
 
         virtual void allocateMemory() {

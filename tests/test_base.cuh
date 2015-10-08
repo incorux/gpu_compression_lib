@@ -91,13 +91,13 @@ public:
             TIMEIT_END("G->M");
 
             CAPTURE(bit_length);
-            CHECK(testData()==0);
+            CHECK(testData());
             
             if(print) PPRINT_THROUGPUT(("%s, %s, %d", __PRETTY_FUNCTION__, typeid(T).name(), bit_length), data_size);
         }
     }
 
-    T testData() {
+    virtual T testData() {
        return compare_arrays(host_data2, host_data, max_size);
     }
 
@@ -119,5 +119,21 @@ protected:
 
     mmManager manager;
 };
+
+#define RUN_TEST(NAME, CNAME, PARAM)\
+TEST_CASE( NAME " test set", "[" NAME "]") {\
+    SECTION("int: SMALL ALIGNED data set")   {CNAME <int, PARAM> ().run(SMALL_ALIGNED_DATA_SET);}\
+    SECTION("int: SMALL data set")   {CNAME <int, PARAM> ().run(SMALL_DATA_SET);}\
+    SECTION("int: MEDIUM data set")  {CNAME <int, PARAM>  ().run(MEDIUM_DATA_SET);}\
+    SECTION("long: SMALL ALIGNED data set")  {CNAME <long, PARAM> ().run(SMALL_ALIGNED_DATA_SET);}\
+    SECTION("long: SMALL data set")  {CNAME <long, PARAM> ().run(SMALL_DATA_SET);}\
+    SECTION("long: MEDIUM data set")  {CNAME <long, PARAM> ().run(MEDIUM_DATA_SET);}\
+}
+
+#define RUN_PERF_TEST(NAME, CNAME, PARAM)\
+TEST_CASE( NAME " performance test", "[" NAME "][PERF][hide]" ) {\
+    SECTION("int: PERF data set")   {CNAME <int, PARAM> ().run(PERF_DATA_SET, true);}\
+    SECTION("long: PERF data set")  {CNAME <long, PARAM>  ().run(PERF_DATA_SET, true);}\
+}
 
 #endif /* end of include guard: TEST_BASE_CUH_WT3FRCI9 */
