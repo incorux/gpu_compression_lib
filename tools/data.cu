@@ -30,10 +30,10 @@ template <typename T>
 void big_random_block_with_decreasing_values( unsigned long size, int limit_bits, T *data) 
 {
     T mask = NBITSTOMASK(limit_bits);
-    T max_value = size * limit_bits;
+    T max_value = size * mask;
     data[0] = max_value;
     for (unsigned long i = 1; i < size; i++)
-        data[i] = data[i-1] * (xorshf96() & mask);
+        data[i] = data[i-1] -  (xorshf96() & mask);
 }
 
 template <typename T>
@@ -48,15 +48,7 @@ void big_random_block_with_outliers( unsigned long size, int outlier_count, int 
     }
 }
 
-void compare_arrays_element_print(long i, long a, long b)
-{
-    DPRINT(("Error at %ld element (%ld != %ld)\n ", i, a, b));
-}
 
-void compare_arrays_element_print(long i, int a, int b)
-{
-    DPRINT(("Error at %ld element (%d != %d)\n ", i, a, b));
-}
 template <typename T>
 int compare_arrays(T *in1, T *in2, unsigned long size)
 {
@@ -64,7 +56,7 @@ int compare_arrays(T *in1, T *in2, unsigned long size)
     for(unsigned long i = 0; i < size; i++) {
         if(in1[i] != in2[i]) {
             count_errors += 1;
-            /*compare_arrays_element_print(i, in1[i], in2[i]);*/
+            compare_arrays_element_print(i, in1[i], in2[i]);
         }
     }
     if (count_errors)

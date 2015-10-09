@@ -31,6 +31,8 @@ class test_delta: public test_base<T, CWARP_SIZE>
 
             this->compression_blocks_count = (this->compressed_data_size / sizeof(T)) / CWARP_SIZE + 1;
 
+            this->cword = 2; //TODO: remove after debug
+
         }
 
         virtual void initializeData(int bit_length) {

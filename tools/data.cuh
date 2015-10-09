@@ -1,6 +1,7 @@
 #ifndef DATA_CUH_8QZALZKW
 #define DATA_CUH_8QZALZKW 1
 #include <stdio.h>
+#include <iostream>
 
 // Tools
 template <typename T> void big_random_block ( unsigned long size, int limit_bits, T *data);
@@ -10,6 +11,12 @@ template <typename T> int compare_arrays ( T *in1, T *in2, unsigned long size);
 
 template <typename T>
 void big_random_block_with_decreasing_values( unsigned long size, int limit_bits, T *data);
+
+template <typename T1, typename T2, typename T3>
+void inline compare_arrays_element_print(T1 i, T2 a, T3 b)
+{
+    std::cout<< "Error at " << i << "element "<< a << " != " << b << "\n";
+}
 
 #define DEBUG_DATA 0
 
