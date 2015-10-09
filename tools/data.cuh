@@ -15,7 +15,7 @@ void big_random_block_with_decreasing_values( unsigned long size, int limit_bits
 template <typename T1, typename T2, typename T3>
 void inline compare_arrays_element_print(T1 i, T2 a, T3 b)
 {
-    std::cout<< "Error at " << i << "element "<< a << " != " << b << "\n";
+    ;//std::cout<< "Error at " << i << "element "<< a << " != " << b << "\n";
 }
 
 #define DEBUG_DATA 0

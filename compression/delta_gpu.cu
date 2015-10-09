@@ -69,7 +69,7 @@ __device__  void delta_afl_compress_base_gpu (const unsigned int bit_length, uns
         } else {
             v1 = v2 - v1;
         }
-        printf("Comp %d %d %d\n", threadIdx.x, v1, tmp_v1);
+        /* printf("Comp %d %d %d\n", threadIdx.x, v1, tmp_v1); */
 
         if (v1_pos >= CWORD_SIZE(T) - bit_length){
             v1_len = CWORD_SIZE(T) - v1_pos;
@@ -148,7 +148,7 @@ __device__ void delta_afl_decompress_base_gpu (
 
         data[pos_decomp] = ret;
         pos_decomp += CWARP_SIZE;
-        printf("Decomp %d %d\n", threadIdx.x, ret);
+        /* printf("Decomp %d %d\n", threadIdx.x, ret); */
 
         v2 = __shfl(ret, 31); // get final ret from lane 31
         if(lane == 0) 

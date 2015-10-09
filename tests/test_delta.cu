@@ -4,6 +4,7 @@
 #define RUN_TEST_DELTA(NAME, CNAME, PARAM)\
 TEST_CASE( NAME " test set", "[" NAME "]" ) {\
     SECTION("int: SMALL ALIGNED data set")   {CNAME <int, PARAM> ().run(SMALL_ALIGNED_DATA_SET);}\
+    SECTION("int: MEDIUM data set")  {CNAME <int, PARAM>  ().run(MEDIUM_DATA_SET);}\
 }
 
     /* SECTION("int: MEDIUM data set")  {CNAME <int, PARAM>  ().run(MEDIUM_DATA_SET);}\ */
