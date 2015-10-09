@@ -1,5 +1,7 @@
 #ifndef DELTA_CUH_KKZZHX97
 #define DELTA_CUH_KKZZHX97
+#include "macros.cuh"
+
 
 template <typename T> __global__ void delta_compress_gpu (T *data, T *compressed_data, T *spoints, unsigned int bit_length, unsigned long length, unsigned long spoints_length);
 
