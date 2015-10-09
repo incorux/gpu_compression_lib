@@ -2,9 +2,9 @@
 #include <stdio.h>
 
 #define WARP_SZ 32
-__device__ inline int get_lane_id(void) { return threadIdx.x % WARP_SZ; }
+__device__ inline int get_lane_id(void) { return threadIdx.x % WARP_SZ; } //TODO: move to macros and reuse
 
-__device__ int shfl_prefix_sum(int value, int width=32) 
+__device__ int shfl_prefix_sum(int value, int width=32)  // TODO: move to macros and reuse
 {
     int lane_id = get_lane_id();
 
@@ -154,83 +154,123 @@ __device__ void delta_afl_decompress_base_gpu (
     }
 }
 
-template <typename T>
-__global__ void delta_compress_gpu (T *data, T *compressed_data, T *spoints, unsigned int bit_length, unsigned long length, unsigned long spoints_length) 
+template < typename T, char CWARP_SIZE >
+__global__ void delta_afl_compress_gpu (const unsigned int bit_length, T *data, T *compressed_data, T* compressed_data_block_start, unsigned long length)
 {
-    int tid = ((blockIdx.x * blockDim.x) + threadIdx.x);
-    int laneId = get_lane_id();
-    int warpId = tid / 32; //TODO: fix
+    const unsigned int warp_lane = (threadIdx.x % CWARP_SIZE); 
+    const unsigned long data_block = blockIdx.x * blockDim.x + threadIdx.x - warp_lane;
+    const unsigned long data_id = data_block * CWORD_SIZE(T) + warp_lane;
+    const unsigned long cdata_id = data_block * bit_length + warp_lane;
 
-    int value1=0;
-    int value2=0;
-    int zeroLaneValue=0;
+    delta_afl_compress_base_gpu <T, CWARP_SIZE> (bit_length, data_id, cdata_id, data, compressed_data, compressed_data_block_start, length);
+}
 
-    char neighborId = laneId - 1;
+template < typename T, char CWARP_SIZE >
+__global__ void delta_afl_decompress_gpu (const unsigned int bit_length, T *compressed_data, T* compressed_data_block_start, T * decompress_data, unsigned long length)
+{
+    const unsigned int warp_lane = (threadIdx.x % CWARP_SIZE); 
+    const unsigned long data_block = blockIdx.x * blockDim.x + threadIdx.x - warp_lane;
+    const unsigned long data_id = data_block * CWORD_SIZE(T) + warp_lane;
+    const unsigned long cdata_id = data_block * bit_length + warp_lane;
 
-    //TODO: add if data index in range
-    value1 = laneId; //data[tid];
-    zeroLaneValue = value1;
+    delta_afl_decompress_base_gpu <T, CWARP_SIZE> (bit_length, cdata_id, data_id, compressed_data, compressed_data_block_start, decompress_data, length);
+}
 
-    if (laneId == 0)  {
-        neighborId = 31; 
-        spoints[warpId] = value1;
-    }
+template < typename T, char CWARP_SIZE >
+__host__ void run_delta_afl_compress_gpu(const unsigned int bit_length, T *data, T *compressed_data, T* compressed_data_block_start, unsigned long length)
+{
+    const unsigned int block_size = CWARP_SIZE * 8; // better occupancy 
+    const unsigned long block_number = (length + block_size * CWORD_SIZE(T) - 1) / (block_size * CWORD_SIZE(T));
+    delta_afl_compress_gpu <T, CWARP_SIZE> <<<block_number, block_size>>> (bit_length, data, compressed_data, compressed_data_block_start,length);
+}
 
-    int ret = 0;
+template < typename T, char CWARP_SIZE >
+__host__ void run_delta_afl_decompress_gpu(const unsigned int bit_length, T *compressed_data, T* compressed_data_block_start, T *data, unsigned long length)
+{
+    const unsigned int block_size = CWARP_SIZE * 8; // better occupancy
+    const unsigned long block_number = (length + block_size * CWORD_SIZE(T) - 1) / (block_size * CWORD_SIZE(T));
+    delta_afl_decompress_gpu <T, CWARP_SIZE> <<<block_number, block_size>>> (bit_length, compressed_data, compressed_data_block_start,data, length);
+}
 
-    for (int i = 1;  i < 2; ++ i)
-    {
-        // Get previous value from neighborId
-        value2 = __shfl( value1, neighborId, 32); 
 
-        if (laneId == 0)
-        {
-            // Lane 0 operates wraps data for next iteration
-            ret = zeroLaneValue - value1;
-            zeroLaneValue = value2;
+
+/* template <typename T> */
+/* __global__ void delta_compress_gpu (T *data, T *compressed_data, T *spoints, unsigned int bit_length, unsigned long length, unsigned long spoints_length) */ 
+/* { */
+/*     int tid = ((blockIdx.x * blockDim.x) + threadIdx.x); */
+/*     int laneId = get_lane_id(); */
+/*     int warpId = tid / 32; //TODO: fix */
+
+/*     int value1=0; */
+/*     int value2=0; */
+/*     int zeroLaneValue=0; */
+
+/*     char neighborId = laneId - 1; */
+
+/*     //TODO: add if data index in range */
+/*     value1 = laneId; //data[tid]; */
+/*     zeroLaneValue = value1; */
+
+/*     if (laneId == 0)  { */
+/*         neighborId = 31; */ 
+/*         spoints[warpId] = value1; */
+/*     } */
+
+/*     int ret = 0; */
+
+/*     for (int i = 1;  i < 2; ++ i) */
+/*     { */
+/*         // Get previous value from neighborId */
+/*         value2 = __shfl( value1, neighborId, 32); */ 
+
+/*         if (laneId == 0) */
+/*         { */
+/*             // Lane 0 operates wraps data for next iteration */
+/*             ret = zeroLaneValue - value1; */
+/*             zeroLaneValue = value2; */
             
-            /* printf("Thread %d final value = %d zeroLaneValue %d, value1 %d\n", threadIdx.x, zeroLaneValue - value1, zeroLaneValue, value1); */
-        } else {
-            ret = value2 - value1;
-            printf("Thread %d final value = %d\n", threadIdx.x, value2 - value1);
-        }
+/*             /1* printf("Thread %d final value = %d zeroLaneValue %d, value1 %d\n", threadIdx.x, zeroLaneValue - value1, zeroLaneValue, value1); *1/ */
+/*         } else { */
+/*             ret = value2 - value1; */
+/*             printf("Thread %d final value = %d\n", threadIdx.x, value2 - value1); */
+/*         } */
 
-        value1 = laneId + i; //data[tid + i * 32]; 
+/*         value1 = laneId + i; //data[tid + i * 32]; */ 
 
-        /* if (ret != 1) */
-        /* { */
-        /*     printf("Error %d ret %d\n", threadIdx.x, ret); */
-        /* } */
-    }
-}
+/*         /1* if (ret != 1) *1/ */
+/*         /1* { *1/ */
+/*         /1*     printf("Error %d ret %d\n", threadIdx.x, ret); *1/ */
+/*         /1* } *1/ */
+/*     } */
+/* } */
 
-template <typename T>
-__global__ void delta_decompress_gpu (T *compressed_data, T *spoints, T *data, unsigned long length, unsigned int spoints_length, int width=32)
-{
-    int id = ((blockIdx.x * blockDim.x) + threadIdx.x);
-    int lane_id = id % warpSize;
-    int warpId = threadIdx.x / 32; //TODO: fix
+/* template <typename T> */
+/* __global__ void delta_decompress_gpu (T *compressed_data, T *spoints, T *data, unsigned long length, unsigned int spoints_length, int width=32) */
+/* { */
+/*     int id = ((blockIdx.x * blockDim.x) + threadIdx.x); */
+/*     int lane_id = id % warpSize; */
+/*     int warpId = threadIdx.x / 32; //TODO: fix */
 
-    T value = data[id] + spoints[warpId];
-    int laneZeroValue=0;
+/*     T value = data[id] + spoints[warpId]; */
+/*     int laneZeroValue=0; */
 
-    for (int j = 0;  j < 3; ++ j)
-    {
-        // Now accumulate in log2(32) steps
-        for(int i=1; i <= width; i *= 2) 
-        {
-            int n = __shfl_up(value, i);
-            if(lane_id >= i) value += n;
-        }
+/*     for (int j = 0;  j < 3; ++ j) */
+/*     { */
+/*         // Now accumulate in log2(32) steps */
+/*         for(int i=1; i <= width; i *= 2) */ 
+/*         { */
+/*             int n = __shfl_up(value, i); */
+/*             if(lane_id >= i) value += n; */
+/*         } */
         
-        printf("Thread %d final value = %d\n", threadIdx.x, value);
-        laneZeroValue = __shfl(value, 31);
-        value = data[id];
+/*         printf("Thread %d final value = %d\n", threadIdx.x, value); */
+/*         laneZeroValue = __shfl(value, 31); */
+/*         value = data[id]; */
 
-        if (lane_id == 0) value=laneZeroValue + value;
-    }
-}
+/*         if (lane_id == 0) value=laneZeroValue + value; */
+/*     } */
+/* } */
 
-template __global__ void delta_compress_gpu <int> (int *data, int *compressed_data, int *spoints, unsigned int bit_length, unsigned long length, unsigned long spoints_length);
+/* template __global__ void delta_compress_gpu <int> (int *data, int *compressed_data, int *spoints, unsigned int bit_length, unsigned long length, unsigned long spoints_length); */
 
 
