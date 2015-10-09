@@ -27,6 +27,16 @@ void big_random_block( unsigned long size, int limit_bits, T *data)
 }
 
 template <typename T>
+void big_random_block_with_decreasing_values( unsigned long size, int limit_bits, T *data) 
+{
+    T mask = NBITSTOMASK(limit_bits);
+    T max_value = size * limit_bits;
+    data[0] = max_value;
+    for (unsigned long i = 1; i < size; i++)
+        data[i] = data[i-1] * (xorshf96() & mask);
+}
+
+template <typename T>
 void big_random_block_with_outliers( unsigned long size, int outlier_count, int limit_bits, int outlier_bits,  T *data) 
 {
     big_random_block(size, limit_bits, data);
@@ -66,6 +76,7 @@ int compare_arrays(T *in1, T *in2, unsigned long size)
 #define DATA_FUNC_SPEC(X) \
 template void big_random_block <X> ( unsigned long size, int limit_bits, X *data);\
 template void big_random_block_with_outliers <X> ( unsigned long size, int outlier_count, int limit_bits, int outlier_bits,  X *data);\
-template int compare_arrays <X> (X *in1, X *in2, unsigned long size);
+template int compare_arrays <X> (X *in1, X *in2, unsigned long size);\
+template void big_random_block_with_decreasing_values <X> ( unsigned long size, int limit_bits, X *data);
 
 FOR_EACH(DATA_FUNC_SPEC, int, long, unsigned int, unsigned long)

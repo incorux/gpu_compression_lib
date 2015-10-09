@@ -1,9 +1,6 @@
 #include "delta_gpu.cuh"
 #include <stdio.h>
 
-#define WARP_SZ 32
-__device__ inline int get_lane_id(void) { return threadIdx.x % WARP_SZ; } //TODO: move to macros and reuse
-
 __device__ int shfl_prefix_sum(int value, int width=32)  // TODO: move to macros and reuse
 {
     int lane_id = get_lane_id();
@@ -18,20 +15,21 @@ __device__ int shfl_prefix_sum(int value, int width=32)  // TODO: move to macros
     return value;
 }
 
-__device__ long shfl_prefix_sum(long value, int width=32) 
-{
-//TODO obsluga dla long trzeba wykonac podwojna zmiane
-    int lane_id = get_lane_id();
 
-    // Now accumulate in log2(32) steps
-#pragma unroll
-    for(int i=1; i<=width; i*=2) {
-        int n = __shfl_up(value, i);
-        if(lane_id >= i) value += n;
-    }
+/* __device__ long shfl_prefix_sum(long value, int width=32) */ 
+/* { */
+/* //TODO obsluga dla long trzeba wykonac podwojna zmiane */
+/*     int lane_id = get_lane_id(); */
 
-    return value;
-}
+/*     // Now accumulate in log2(32) steps */
+/* #pragma unroll */
+/*     for(int i=1; i<=width; i*=2) { */
+/*         int n = __shfl_up(value, i); */
+/*         if(lane_id >= i) value += n; */
+/*     } */
+
+/*     return value; */
+/* } */
 
 template <typename T, char CWARP_SIZE>
 __device__  void delta_afl_compress_base_gpu (const unsigned int bit_length, unsigned long data_id, unsigned long comp_data_id, T *data, T *compressed_data, T* compressed_data_block_start, unsigned long length)
@@ -191,6 +189,17 @@ __host__ void run_delta_afl_decompress_gpu(const unsigned int bit_length, T *com
     const unsigned long block_number = (length + block_size * CWORD_SIZE(T) - 1) / (block_size * CWORD_SIZE(T));
     delta_afl_decompress_gpu <T, CWARP_SIZE> <<<block_number, block_size>>> (bit_length, compressed_data, compressed_data_block_start,data, length);
 }
+
+#define GFL_SPEC(X, A) \
+template  __host__  void run_delta_afl_decompress_gpu<X, A> (const unsigned int bit_length, X *compressed_data, X* compressed_data_block_start, X *data, unsigned long length);\
+template  __host__  void run_delta_afl_compress_gpu<X, A> (const unsigned int bit_length, X *data, X *compressed_data, X* compressed_data_block_start, unsigned long length);\
+template  __global__  void delta_afl_decompress_gpu <X, A> (const unsigned int bit_length, X *compressed_data, X* compressed_data_block_start, X * decompress_data, unsigned long length);\
+template  __global__  void delta_afl_compress_gpu <X, A> (const unsigned int bit_length, X *data, X *compressed_data, X* compressed_data_block_start, unsigned long length);\
+template __device__  void delta_afl_decompress_base_gpu <X, A> ( const unsigned int bit_length, unsigned long comp_data_id, unsigned long data_id, X *compressed_data, X* compressed_data_block_start, X *data, unsigned long length);\
+template __device__   void delta_afl_compress_base_gpu <X, A> (const unsigned int bit_length, unsigned long data_id, unsigned long comp_data_id, X *data, X *compressed_data, X* compressed_data_block_start, unsigned long length);
+
+#define AFL_SPEC(X) GFL_SPEC(X, 32)
+FOR_EACH(AFL_SPEC, int, long, unsigned int, unsigned long)
 
 
 

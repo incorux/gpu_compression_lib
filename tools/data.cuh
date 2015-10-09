@@ -8,6 +8,9 @@ template <typename T> void big_random_block_with_outliers ( unsigned long size, 
 
 template <typename T> int compare_arrays ( T *in1, T *in2, unsigned long size);
 
+template <typename T>
+void big_random_block_with_decreasing_values( unsigned long size, int limit_bits, T *data);
+
 #define DEBUG_DATA 0
 
 #ifdef DEBUG_DATA
