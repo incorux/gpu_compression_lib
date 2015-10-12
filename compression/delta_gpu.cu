@@ -104,7 +104,8 @@ __device__  void delta_afl_compress_base_gpu (const unsigned int bit_length, uns
         pos_data += CWARP_SIZE;
         
         //TODO: v1 reduction 
-        v2 = __shfl( v1, neighborId, 32); 
+        /* v2 = __shfl( v1, neighborId, 32); */ 
+        v2 = shfl_get_value(v1, neighborId);
 
         if (lane == 0)
         {
