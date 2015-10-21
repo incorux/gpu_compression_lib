@@ -35,7 +35,7 @@ void tiPreatyPrint(tiManager &manager)
    printf(")\n");
 }
 
-void tiPreatyPrintThrougput(tiManager &manager, int data_size)
+void tiPreatyPrintThrougput(tiManager &manager, long data_size)
 {
    tiManager::iterator i;
    float sum = 0.0;
@@ -44,18 +44,18 @@ void tiPreatyPrintThrougput(tiManager &manager, int data_size)
    // Print sum
    for(i=manager.begin(); i != manager.end(); ++i)
        sum += (*i)->__elapsedTime;
-   printf("Time, %.2f,ms, ", sum);
+   printf("Time; %.2f; ms; Data size; %ld; bytes;", sum, data_size);
 
    // Print sum for operations marked as *
    sum = 0.0;
    for(i=manager.begin(); i != manager.end(); ++i)
        if ((*i)->name[0] == '*')
            sum += (*i)->__elapsedTime;
-   printf("*, %.2f,ms, %.2f,GB/s, ", sum, ((float)data_size / gb)/ (sum/sec));
+   printf("*; %.2f; ms; %.2f; GB/s; ", sum, ((float)data_size / gb)/ (sum/sec));
 
    // Print each operation
    for(i=manager.begin(); i != manager.end(); ++i)
-       printf("%s, %.2f,ms, %.2f,GB/s, ", (*i)->name, (*i)->__elapsedTime, ((float)data_size / gb) / ((float)(*i)->__elapsedTime / sec) );
+       printf("%s; %.2f;ms; %.2f;GB/s; ", (*i)->name, (*i)->__elapsedTime, ((float)data_size / gb) / ((float)(*i)->__elapsedTime / sec) );
    printf("\n");
 }
 

@@ -4,7 +4,9 @@
 #include "catch.hpp"
 #include "tools/tools.cuh"
 #include <typeinfo>
-#define PPRINT_THROUGPUT(name, data_size) {printf("%c[1;34m",27);  printf name; printf("%c[30m, %c[37m", 27,27); TIMEIT_PRINT_THROUGPUT(data_size);}
+#include <string>
+
+#define PPRINT_THROUGPUT(name, data_size) {printf("%c[1;34m",27);  printf name; printf("%c[30m; %c[37m", 27,27); TIMEIT_PRINT_THROUGPUT(data_size);}
 
 template <typename T, int CWARP_SIZE>
 class test_base
@@ -93,7 +95,7 @@ public:
             CAPTURE(bit_length);
             CHECK(testData());
             
-            if(print) PPRINT_THROUGPUT(("%s, %s, %d", __PRETTY_FUNCTION__, typeid(T).name(), bit_length), data_size);
+            if(print) PPRINT_THROUGPUT(("%s; %s; %d", __PRETTY_FUNCTION__, typeid(T).name(), bit_length), data_size);
         }
     }
 
@@ -133,7 +135,28 @@ TEST_CASE( NAME " test set", "[" NAME "]") {\
 #define RUN_PERF_TEST(NAME, CNAME, PARAM)\
 TEST_CASE( NAME " performance test", "[" NAME "][PERF][hide]" ) {\
     SECTION("int: PERF data set")   {CNAME <int, PARAM> ().run(PERF_DATA_SET, true);}\
-    SECTION("long: PERF data set")  {CNAME <long, PARAM>  ().run(PERF_DATA_SET, true);}\
+    SECTION("int: PERF data set")   {CNAME <long, PARAM> ().run(PERF_DATA_SET, true);}\
+}
+
+#define RUN_BENCHMARK_TEST(NAME, CNAME, PARAM)\
+TEST_CASE( NAME " benchmark test", "[" NAME "][BENCHMARK][hide]" ) {\
+    long i;\
+    SECTION("int: BENCHMARK data set")   {\
+        for (i = 1000; i < 1000000; i*=10)\
+            CNAME <int, PARAM> ().run(i, true);\
+        for (i = 1000000; i< 100000000; i+= 10 * 1000000)\
+            CNAME <int, PARAM> ().run(i, true);\
+        for (i = 100000000; i<= 200000000; i+= 5 * 10000000)\
+            CNAME <int, PARAM> ().run(i, true);\
+    }\
+    SECTION("long: BENCHMARK data set")   {\
+        for (i = 1000; i < 1000000; i*=10)\
+            CNAME <long, PARAM> ().run(i, true);\
+        for (i = 1000000; i< 100000000; i+= 10 * 1000000)\
+            CNAME <long, PARAM> ().run(i, true);\
+        for (i = 100000000; i<= 200000000; i+= 5 * 10000000)\
+            CNAME <long, PARAM> ().run(i, true);\
+    }\
 }
 
 #endif /* end of include guard: TEST_BASE_CUH_WT3FRCI9 */

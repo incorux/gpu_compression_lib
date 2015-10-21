@@ -18,7 +18,7 @@ void tiStart                ( tiManager &manager);
 void tiEnd                  ( tiManager &manager, const char * name);
 void tiPreatyPrint          ( tiManager &manager);
 void tiClear                ( tiManager &manager);
-void tiPreatyPrintThrougput ( tiManager &manager, int data_size);
+void tiPreatyPrintThrougput ( tiManager &manager, long data_size);
 
 #define TIMEIT_SETUP() tiManager __tim__;
 #define TIMEIT_START() tiStart(__tim__);
