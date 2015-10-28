@@ -58,12 +58,15 @@ public:
         this->compressed_data_size = (max_size < cword  ? cword : max_size) * sizeof(T);
     }
 
-    virtual void run(unsigned int max_size, bool print = false)
+    virtual int run(unsigned long max_size, bool print = false)
     {
         setup(max_size);
 
         allocateMemory();
         TIMEIT_SETUP();
+
+        mmCudaReportUsage(manager);
+        int error_count = 0;
 
         for (unsigned int bit_length = 1; bit_length < cword; ++bit_length) {
             initializeData(bit_length);
@@ -92,11 +95,13 @@ public:
             transferDataFromGPU();
             TIMEIT_END("G->M");
 
-            CAPTURE(bit_length);
-            CHECK(testData());
+            if(testData()) error_count +=1;
             
             if(print) PPRINT_THROUGPUT(("%s; %s; %d", __PRETTY_FUNCTION__, typeid(T).name(), bit_length), data_size);
         }
+
+        mmCudaFreeAll(manager);
+        return error_count;
     }
 
     virtual T testData() {
@@ -123,38 +128,47 @@ protected:
 };
 
 #define RUN_TEST(NAME, CNAME, PARAM)\
-TEST_CASE( NAME " test set", "[" NAME "]") {\
-    SECTION("int: SMALL ALIGNED data set")   {CNAME <int, PARAM> ().run(SMALL_ALIGNED_DATA_SET);}\
-    SECTION("int: SMALL data set")   {CNAME <int, PARAM> ().run(SMALL_DATA_SET);}\
-    SECTION("int: MEDIUM data set")  {CNAME <int, PARAM>  ().run(MEDIUM_DATA_SET);}\
-    SECTION("long: SMALL ALIGNED data set")  {CNAME <long, PARAM> ().run(SMALL_ALIGNED_DATA_SET);}\
-    SECTION("long: SMALL data set")  {CNAME <long, PARAM> ().run(SMALL_DATA_SET);}\
-    SECTION("long: MEDIUM data set")  {CNAME <long, PARAM> ().run(MEDIUM_DATA_SET);}\
+TEST_CASE( NAME " test set", "[" NAME "][ALL]") {\
+    SECTION("int: SMALL ALIGNED data set")  { CNAME <int, PARAM> test  ; CHECK(test.run(SMALL_ALIGNED_DATA_SET) == 0 );}\
+    SECTION("int: SMALL data set")          { CNAME <int, PARAM> test  ; CHECK(test.run(SMALL_DATA_SET) == 0 );}\
+    SECTION("int: MEDIUM data set")         { CNAME <int, PARAM> test  ; CHECK(test.run(MEDIUM_DATA_SET) == 0 );}\
+    SECTION("long: SMALL ALIGNED data set") { CNAME <long, PARAM> test ; CHECK(test.run(SMALL_ALIGNED_DATA_SET) == 0 );}\
+    SECTION("long: SMALL data set")         { CNAME <long, PARAM> test ; CHECK(test.run(SMALL_DATA_SET) == 0 );}\
+    SECTION("long: MEDIUM data set")        { CNAME <long, PARAM> test ; CHECK(test.run(MEDIUM_DATA_SET) == 0 );}\
 }
 
 #define RUN_PERF_TEST(NAME, CNAME, PARAM)\
-TEST_CASE( NAME " performance test", "[" NAME "][PERF][hide]" ) {\
-    SECTION("int: PERF data set")   {CNAME <int, PARAM> ().run(PERF_DATA_SET, true);}\
-    SECTION("int: PERF data set")   {CNAME <long, PARAM> ().run(PERF_DATA_SET, true);}\
+TEST_CASE( NAME " performance test", "[.][" NAME "][PERF]" ) {\
+    SECTION("int: PERF data set")   {CNAME <int, PARAM> test; CHECK(test.run(PERF_DATA_SET, true) == 0 );}\
+    SECTION("int: PERF data set")   {CNAME <long, PARAM> test;CHECK(test.run(PERF_DATA_SET, true) == 0 );}\
 }
 
+/* #define RUN_BENCHMARK_TEST(NAME, CNAME, PARAM)\ */
+/* TEST_CASE( NAME " benchmark test", "[" NAME "][BENCHMARK][hide]" ) {\ */
+/*     long i;\ */
+/*     SECTION("int: BENCHMARK data set")   {\ */
+/*         for (i = 1000; i < 1000000; i*=10)\ */
+/*             CNAME <int, PARAM> ().run(i, true);\ */
+/*         for (i = 1000000; i< 100000000; i+= 10 * 1000000)\ */
+/*             CNAME <int, PARAM> ().run(i, true);\ */
+/*         for (i = 100000000; i<= 300000000-1; i+= 5 * 10000000)\ */
+/*             CNAME <int, PARAM> ().run(i, true);\ */
+/*     }\ */
+/*     SECTION("long: BENCHMARK data set")   {\ */
+/*         for (i = 1000; i < 1000000; i*=10)\ */
+/*             CNAME <long, PARAM> ().run(i, true);\ */
+/*         for (i = 1000000; i< 100000000; i+= 10 * 1000000)\ */
+/*             CNAME <long, PARAM> ().run(i, true);\ */
+/*         for (i = 100000000; i<= 150000000; i+= 5 * 10000000)\ */
+/*             CNAME <long, PARAM> ().run(i, true);\ */
+/*     }\ */
+/* } */
+
 #define RUN_BENCHMARK_TEST(NAME, CNAME, PARAM)\
-TEST_CASE( NAME " benchmark test", "[" NAME "][BENCHMARK][hide]" ) {\
+TEST_CASE( NAME " benchmark test", "[.][" NAME "][BENCHMARK]" ) {\
     long i;\
-    SECTION("int: BENCHMARK data set")   {\
-        for (i = 1000; i < 1000000; i*=10)\
-            CNAME <int, PARAM> ().run(i, true);\
-        for (i = 1000000; i< 100000000; i+= 10 * 1000000)\
-            CNAME <int, PARAM> ().run(i, true);\
-        for (i = 100000000; i<= 200000000; i+= 5 * 10000000)\
-            CNAME <int, PARAM> ().run(i, true);\
-    }\
     SECTION("long: BENCHMARK data set")   {\
-        for (i = 1000; i < 1000000; i*=10)\
-            CNAME <long, PARAM> ().run(i, true);\
-        for (i = 1000000; i< 100000000; i+= 10 * 1000000)\
-            CNAME <long, PARAM> ().run(i, true);\
-        for (i = 100000000; i<= 200000000; i+= 5 * 10000000)\
+        for (i = 100000000; i<= 150000000; i+= 5 * 10000000)\
             CNAME <long, PARAM> ().run(i, true);\
     }\
 }

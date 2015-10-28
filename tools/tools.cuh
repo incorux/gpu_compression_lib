@@ -5,5 +5,6 @@
 #include "memory.cuh"
 #include "data.cuh"
 #include "timeit.cuh"
+#include "macros.cuh"
 
 #endif

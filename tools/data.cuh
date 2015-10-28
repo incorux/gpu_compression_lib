@@ -18,12 +18,7 @@ void inline compare_arrays_element_print(T1 i, T2 a, T3 b)
     ;//std::cout<< "Error at " << i << "element "<< a << " != " << b << "\n";
 }
 
-#define DEBUG_DATA 0
 
-#ifdef DEBUG_DATA
 # define DPRINT(x) printf x
-#else
-# define DPRINT(x) do {} while (0)
-#endif
 
 #endif /* end of include guard: DATA_CUH_8QZALZKW */

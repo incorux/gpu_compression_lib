@@ -15,10 +15,10 @@ class test_pafl: public test_base<T, CWARP_SIZE>
             mmCudaMalloc(this->manager, (void **) &this->dev_out, this->data_size); 
             mmCudaMalloc(this->manager, (void **) &this->dev_data, this->data_size);
 
-            mmCudaMalloc(this->manager, (void **) &this->dev_data_patch_count, sizeof(int));
+            mmCudaMalloc(this->manager, (void **) &this->dev_data_patch_count, sizeof(T));
             mmCudaMalloc(this->manager, (void **) &this->dev_data_patch_index, outlier_data_size);
             mmCudaMalloc(this->manager, (void **) &this->dev_data_patch_values, outlier_data_size);
-            mmCudaMalloc(this->manager, (void **) &this->dev_queue_patch_count, sizeof(int));
+            mmCudaMalloc(this->manager, (void **) &this->dev_queue_patch_count, sizeof(T));
             mmCudaMalloc(this->manager, (void **) &this->dev_queue_patch_index, outlier_data_size);
             mmCudaMalloc(this->manager, (void **) &this->dev_queue_patch_values, outlier_data_size);
         }
@@ -85,8 +85,8 @@ class test_pafl: public test_base<T, CWARP_SIZE>
     protected:
         T *dev_data_patch_index, *dev_data_patch_values, *dev_data_patch_count;
         T *dev_queue_patch_index, *dev_queue_patch_values, *dev_queue_patch_count;
-        int outlier_count;
-        int outlier_data_size;
+        T outlier_count;
+        T outlier_data_size;
         float outlier_percent;
         pafl_header comp_h;
 };

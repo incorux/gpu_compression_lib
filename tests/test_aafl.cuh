@@ -28,9 +28,9 @@ class test_aafl: public test_base<T, CWARP_SIZE>
 
             // for size less then cword we actually will need more space than original data
             this->compressed_data_size = ((max_size < this->cword  ? this->cword : max_size) + 32) * sizeof(T);
-            this->dev_data_size_alloc = this->compressed_data_size * sizeof(T);
+            this->dev_data_size_alloc = this->compressed_data_size;
 
-            this->compression_blocks_count = (this->compressed_data_size / sizeof(T)) / CWARP_SIZE + 1;
+            this->compression_blocks_count = (this->compressed_data_size / sizeof(T)) / CWARP_SIZE + CWARP_SIZE;
 
         }
 

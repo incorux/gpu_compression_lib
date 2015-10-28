@@ -33,12 +33,34 @@ void __mmCudaFreeInternal(allocation_info *d)
     }
 }
 
+
 void mmCudaFreeAll(mmManager &manager)
 {
    mmManager::iterator i;
    for(i=manager.begin(); i != manager.end(); ++i) 
        __mmCudaFreeInternal(&(*i));
    manager.clear();
+}
+
+void mmCudaReportUsage( mmManager &manager)
+{
+    if (!if_debug()) return;
+
+   mmManager::iterator i;
+   unsigned long gpu_size = 0, cpu_size = 0;
+   printf("Memory usage report\n");
+   for(i=manager.begin(); i != manager.end(); ++i) {
+       if (!(*i).freed) {
+           if ((*i).device) { 
+               gpu_size += (*i).size;
+               printf("GPU %ld\n", (*i).size);
+           } else {
+               cpu_size += (*i).size;
+               printf("CPU %ld\n", (*i).size);
+           }
+       }
+   }
+   printf("Summary: GPU %ld, CPU %ld\n", gpu_size, cpu_size);
 }
 
 void mmCudaFree(mmManager &manager, void *ptr)
