@@ -24,7 +24,6 @@ void afl_gpu_test(unsigned long max_size, bool block_decompress=true)
 
     // for size less then cword we actually will need more space than original data
     int compressed_data_size = (max_size < cword  ? cword : max_size) * sizeof(T); 
-
     unsigned long data_size = max_size * sizeof(T); 
 
     mmManager manager;
@@ -79,8 +78,10 @@ void pafl_gpu_test(unsigned long max_size)
     int *dev_out;
     int *dev_data;
     int *host_data, *host_data2;
-    int *dev_data_patch_index, *dev_data_patch_values, *dev_data_patch_count;
-    int *dev_queue_patch_index, *dev_queue_patch_values, *dev_queue_patch_count;
+    int *dev_data_patch_index, *dev_data_patch_values;
+    unsigned long *dev_data_patch_count;
+    int *dev_queue_patch_index, *dev_queue_patch_values;
+    unsigned long *dev_queue_patch_count;
     int outlier_count = 0.2 * max_size;
 
     mmManager manager;
@@ -109,12 +110,12 @@ void pafl_gpu_test(unsigned long max_size)
 
         pafl_header comp_h = { i, 3 };
         cudaMemset(dev_out, 0, max_size * sizeof(int)); // Clean up before compression
-        cudaMemset(dev_data_patch_count, 0, sizeof(int)); // Clean up before compression
-        cudaMemset(dev_queue_patch_count, 0, sizeof(int)); // Clean up before compression
+        cudaMemset(dev_data_patch_count, 0, sizeof(unsigned long)); // Clean up before compression
+        cudaMemset(dev_queue_patch_count, 0, sizeof(unsigned long)); // Clean up before compression
 
         TIMEIT_START();
         //TODO
-        run_pafl_compress_gpu_alternate(
+        run_pafl_compress_gpu_alternate <int, 32>(
                 comp_h,
                 dev_data,
                 dev_out,
@@ -150,7 +151,7 @@ void pafl_gpu_test(unsigned long max_size)
         cudaMemset(dev_data, 0, max_size * sizeof(int)); // Clean up before decompression
 
         TIMEIT_START();
-        run_pafl_decompress_gpu(
+        run_pafl_decompress_gpu<int,32>(
                 comp_h, 
                 dev_out, 
                 dev_data, 

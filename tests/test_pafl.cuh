@@ -3,7 +3,7 @@
 #include "test_base.cuh"
 #include "compression/pafl_gpu.cuh"
 
-template <typename T, int CWARP_SIZE> 
+template <typename T, char CWARP_SIZE> 
 class test_pafl: public test_base<T, CWARP_SIZE> 
 {
     public: 
@@ -24,6 +24,7 @@ class test_pafl: public test_base<T, CWARP_SIZE>
         }
 
         virtual void setup(unsigned long max_size) {
+            this->outlier_percent = 0.1;
             this->max_size = max_size;
             this->cword = sizeof(T) * 8;
             this->data_size = max_size * sizeof(T);
@@ -46,12 +47,12 @@ class test_pafl: public test_base<T, CWARP_SIZE>
         // Clean up before compression
         virtual void cleanBeforeCompress() {
             cudaMemset(this->dev_out, 0, this->data_size); 
-            cudaMemset(this->dev_data_patch_count, 0, sizeof(int)); 
-            cudaMemset(this->dev_queue_patch_count, 0, sizeof(int)); 
+            cudaMemset(this->dev_data_patch_count, 0,  sizeof(T)); 
+            cudaMemset(this->dev_queue_patch_count, 0, sizeof(T)); 
         }
 
         virtual void compressData(int bit_length) {
-            run_pafl_compress_gpu_alternate(
+            run_pafl_compress_gpu_alternate <T,CWARP_SIZE> (
                 this->comp_h,
                 this->dev_data,
                 this->dev_out,
@@ -68,7 +69,7 @@ class test_pafl: public test_base<T, CWARP_SIZE>
         }
 
         virtual void decompressData(int bit_length) {
-            run_pafl_decompress_gpu(
+            run_pafl_decompress_gpu < T, CWARP_SIZE> (
                 this->comp_h, 
                 this->dev_out, 
                 this->dev_data, 
@@ -80,11 +81,10 @@ class test_pafl: public test_base<T, CWARP_SIZE>
                 );
         }
 
-        test_pafl(float outlier_percent): outlier_percent(outlier_percent) {};
-
     protected:
-        T *dev_data_patch_index, *dev_data_patch_values, *dev_data_patch_count;
-        T *dev_queue_patch_index, *dev_queue_patch_values, *dev_queue_patch_count;
+        T *dev_data_patch_index, *dev_data_patch_values;
+        unsigned long *dev_data_patch_count, *dev_queue_patch_count;
+        T *dev_queue_patch_index, *dev_queue_patch_values; 
         T outlier_count;
         T outlier_data_size;
         float outlier_percent;
