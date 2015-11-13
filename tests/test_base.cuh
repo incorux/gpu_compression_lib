@@ -2,6 +2,7 @@
 #define TEST_BASE_CUH_WT3FRCI9
 
 #include "catch.hpp"
+#include "config.cuh" 
 #include "tools/tools.cuh"
 #include <typeinfo>
 #include <string>
@@ -50,35 +51,50 @@ public:
         gpuErrchk(cudaMemcpy(host_data2, dev_data, data_size, cudaMemcpyDeviceToHost));
     }
 
-    virtual void setup(unsigned long max_size) {
-        this->max_size = max_size;
+    virtual void pre_setup(unsigned long max_size) {
         this->cword = sizeof(T) * 8;
+        this->max_size = max_size;
         this->data_size = max_size * sizeof(T);
+    }
+
+    virtual void setup(unsigned long max_size) {
+        unsigned long data_block_size = sizeof(T) * 8 * 32;
+
         // for size less then cword we actually will need more space than original data
-        this->compressed_data_size = (max_size < cword  ? cword : max_size) * sizeof(T);
+        this->compressed_data_size = (max_size < data_block_size  ? data_block_size : max_size);
+        this->compressed_data_size = ((this->compressed_data_size * this->bit_length + (32*sizeof(T)*8)-1) / (32*sizeof(T)*8)) * 32 * sizeof(T) + (sizeof(T)*8) * sizeof(T);
+
+        if (if_debug()){
+            printf("Comp ratio %f",  (double)((double)this->compressed_data_size / ( double)this->data_size));
+            printf(" %d %lu %ld %ld\n" , this->bit_length, max_size, this->data_size, this->compressed_data_size);
+        }
     }
 
     virtual int run(unsigned long max_size, bool print = false)
     {
-        setup(max_size);
-
-        allocateMemory();
         TIMEIT_SETUP();
+        pre_setup(max_size);
 
-        mmCudaReportUsage(manager);
         int error_count = 0;
 
-        for (unsigned int bit_length = 1; bit_length < cword; ++bit_length) {
-            initializeData(bit_length);
+        for (unsigned int _bit_lenght = 1; _bit_lenght < cword; ++_bit_lenght) {
+            this->bit_length = _bit_lenght;
+            setup(max_size);
+
+            allocateMemory();
+            mmCudaReportUsage(manager);
+
+            initializeData(_bit_lenght);
 
             TIMEIT_START();
             transferDataToGPU();
             TIMEIT_END("M->G");
             
             cleanBeforeCompress();
+            errorCheck();
             
             TIMEIT_START();
-            compressData(bit_length);
+            compressData(_bit_lenght);
             TIMEIT_END("*comp");
             
             errorCheck();
@@ -86,7 +102,7 @@ public:
             cleanBeforeDecompress();
 
             TIMEIT_START();
-            decompressData(bit_length);
+            decompressData(_bit_lenght);
             TIMEIT_END("*decomp");
             
             errorCheck();
@@ -95,12 +111,16 @@ public:
             transferDataFromGPU();
             TIMEIT_END("G->M");
 
-            if(testData()) error_count +=1;
+            if(testData()) { 
+                printf("\n===== %d =====\n", _bit_lenght); 
+                error_count +=1; 
+            }
             
-            if(print) PPRINT_THROUGPUT(("%s; %s; %d", __PRETTY_FUNCTION__, typeid(T).name(), bit_length), data_size);
+            if(print) PPRINT_THROUGPUT(("%s; %s; %d", __PRETTY_FUNCTION__, typeid(T).name(), _bit_lenght), data_size);
+
+            mmCudaFreeAll(manager);
         }
 
-        mmCudaFreeAll(manager);
         return error_count;
     }
 
@@ -120,9 +140,10 @@ protected:
 
     unsigned int cword;
 
-    unsigned int compressed_data_size;
+    unsigned long compressed_data_size;
     unsigned long data_size;
     unsigned long max_size;
+    unsigned int bit_length;
 
     mmManager manager;
 };
@@ -138,39 +159,45 @@ TEST_CASE( NAME " test set", "[" NAME "][ALL]") {\
 }
 
 #define RUN_PERF_TEST(NAME, CNAME, PARAM)\
-TEST_CASE( NAME " performance test", "[.][" NAME "][PERF]" ) {\
-    SECTION("int: PERF data set")   {CNAME <int, PARAM> test; CHECK(test.run(PERF_DATA_SET, true) == 0 );}\
-    SECTION("int: PERF data set")   {CNAME <long, PARAM> test;CHECK(test.run(PERF_DATA_SET, true) == 0 );}\
+TEST_CASE( NAME " performance test", "[" NAME "][PERF]" ) {\
+    SECTION("int: PERF data set")   {\
+        CNAME <int, PARAM> test; \
+        CHECK(test.run(PERF_DATA_SET, true) == 0 );\
+    }\
+    SECTION("int: PERF data set")   {\
+        CNAME <long, PARAM> test;\
+        CHECK(test.run(PERF_DATA_SET, true) == 0 );\
+    }\
 }
-
-/* #define RUN_BENCHMARK_TEST(NAME, CNAME, PARAM)\ */
-/* TEST_CASE( NAME " benchmark test", "[" NAME "][BENCHMARK][hide]" ) {\ */
-/*     long i;\ */
-/*     SECTION("int: BENCHMARK data set")   {\ */
-/*         for (i = 1000; i < 1000000; i*=10)\ */
-/*             CNAME <int, PARAM> ().run(i, true);\ */
-/*         for (i = 1000000; i< 100000000; i+= 10 * 1000000)\ */
-/*             CNAME <int, PARAM> ().run(i, true);\ */
-/*         for (i = 100000000; i<= 300000000-1; i+= 5 * 10000000)\ */
-/*             CNAME <int, PARAM> ().run(i, true);\ */
-/*     }\ */
-/*     SECTION("long: BENCHMARK data set")   {\ */
-/*         for (i = 1000; i < 1000000; i*=10)\ */
-/*             CNAME <long, PARAM> ().run(i, true);\ */
-/*         for (i = 1000000; i< 100000000; i+= 10 * 1000000)\ */
-/*             CNAME <long, PARAM> ().run(i, true);\ */
-/*         for (i = 100000000; i<= 150000000; i+= 5 * 10000000)\ */
-/*             CNAME <long, PARAM> ().run(i, true);\ */
-/*     }\ */
-/* } */
 
 #define RUN_BENCHMARK_TEST(NAME, CNAME, PARAM)\
 TEST_CASE( NAME " benchmark test", "[.][" NAME "][BENCHMARK]" ) {\
     long i;\
+    SECTION("int: BENCHMARK data set")   {\
+        for (i = 1000; i < 1000000; i*=10)\
+            CNAME <int, PARAM> ().run(i, true);\
+        for (i = 1000000; i< 100000000; i+= 10 * 1000000)\
+            CNAME <int, PARAM> ().run(i, true);\
+        for (i = 100000000; i<= 300000000; i+= 5 * 10000000)\
+            CNAME <int, PARAM> ().run(i, true);\
+    }\
     SECTION("long: BENCHMARK data set")   {\
+        for (i = 1000; i < 1000000; i*=10)\
+            CNAME <long, PARAM> ().run(i, true);\
+        for (i = 1000000; i< 100000000; i+= 10 * 1000000)\
+            CNAME <long, PARAM> ().run(i, true);\
         for (i = 100000000; i<= 150000000; i+= 5 * 10000000)\
             CNAME <long, PARAM> ().run(i, true);\
     }\
 }
+
+/* #define RUN_BENCHMARK_TEST(NAME, CNAME, PARAM)\ */
+/* TEST_CASE( NAME " benchmark test", "[.][" NAME "][BENCHMARK][BENCHMARK_ALL]" ) {\ */
+/*     long i;\ */
+/*     SECTION("long: BENCHMARK data set")   {\ */
+/*         for (i = 1048576 ; i< 150000000; i+= 5 * 10000000)\ */
+/*             CNAME <long, PARAM> ().run(i, true);\ */
+/*     }\ */
+/* } */
 
 #endif /* end of include guard: TEST_BASE_CUH_WT3FRCI9 */

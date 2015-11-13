@@ -1,4 +1,4 @@
-NVCC=nvcc
+NVCC=/usr/local/cuda-7.0/bin/nvcc
 
 NVCCLIBSFLAGS = -dc 
 #NVCCFLAGS    = -gencode arch=compute_20,code=sm_20 -gencode arch=compute_30,code=sm_30 -gencode arch=compute_35,code=sm_35
@@ -24,13 +24,13 @@ TESTS_RUNER = tests/run_tests.out
 
 PROGS = multi_gpu_transfer.out compression_tests.out test.out
 
-all:$(PROGS) $(TESTS_RUNER)
+all:$(PROGS) $(TESTS_RUNER) ctags
 
 debug: NVCCFLAGS += -g -G 
-debug: ctags $(PROGS) 
+debug: all
 
 verbose: NVCCFLAGS += -Xptxas="-v"
-verbose: ctags $(PROGS) 
+verbose: all
 
 clean:
 	rm -f $(CPU_LIBS) $(GPU_LIBS) $(ALL_LIBS) $(PROGS) $(TESTS_OBJ) $(TESTS_RUNER) *.o *.pyc tags gpu_compression_lib.tar.bz2

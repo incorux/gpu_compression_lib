@@ -91,7 +91,7 @@ __host__ void run_afl_decompress_value_gpu(const unsigned int bit_length, T *com
 template < typename T, char CWARP_SIZE >
 __global__ void afl_compress_gpu (const unsigned int bit_length, T *data, T *compressed_data, unsigned long length)
 {
-    const unsigned int warp_lane = (threadIdx.x % CWARP_SIZE); 
+    const unsigned int warp_lane = threadIdx.x % CWARP_SIZE; 
     const unsigned long data_block = blockIdx.x * blockDim.x + threadIdx.x - warp_lane;
     const unsigned long data_id = data_block * CWORD_SIZE(T) + warp_lane;
     const unsigned long cdata_id = data_block * bit_length + warp_lane;
@@ -102,7 +102,7 @@ __global__ void afl_compress_gpu (const unsigned int bit_length, T *data, T *com
 template < typename T, char CWARP_SIZE >
 __global__ void afl_decompress_gpu (const unsigned int bit_length, T *compressed_data, T * decompress_data, unsigned long length)
 {
-    const unsigned int warp_lane = (threadIdx.x % CWARP_SIZE); 
+    const unsigned int warp_lane = threadIdx.x % CWARP_SIZE; 
     const unsigned long data_block = blockIdx.x * blockDim.x + threadIdx.x - warp_lane;
     const unsigned long data_id = data_block * CWORD_SIZE(T) + warp_lane;
     const unsigned long cdata_id = data_block * bit_length + warp_lane;

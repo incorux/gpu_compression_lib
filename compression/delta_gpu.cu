@@ -88,10 +88,10 @@ __device__  void delta_afl_compress_base_gpu (const unsigned int bit_length, uns
     const unsigned long lane = get_lane_id();
     char neighborId = lane - 1;
 
-    const unsigned int warp_lane = (threadIdx.x % CWARP_SIZE); 
-    const unsigned long data_block = blockIdx.x * blockDim.x + threadIdx.x - warp_lane;
+    /* const unsigned int warp_lane = (threadIdx.x % CWARP_SIZE); */ 
+    const unsigned long data_block = blockIdx.x * (blockDim.x / CWARP_SIZE) + threadIdx.x / CWARP_SIZE;
 
-    if (lane == 0)  {
+    if (lane == 0 && pos_data < length)  {
         neighborId = 31; 
         zeroLaneValue = data[pos_data];
         compressed_data_block_start[data_block] = zeroLaneValue;
@@ -164,8 +164,8 @@ __device__ void delta_afl_decompress_base_gpu (
 
     T zeroLaneValue, v2;
 
-    const unsigned int warp_lane = (threadIdx.x % CWARP_SIZE); 
-    const unsigned long data_block = blockIdx.x * blockDim.x + threadIdx.x - warp_lane;
+    /* const unsigned int warp_lane = (threadIdx.x % CWARP_SIZE); */ 
+    const unsigned long data_block = blockIdx.x * (blockDim.x / CWARP_SIZE)  + threadIdx.x / CWARP_SIZE;
 
     if (lane == 0) {
        zeroLaneValue = compressed_data_block_start[data_block];
@@ -208,7 +208,7 @@ __device__ void delta_afl_decompress_base_gpu (
 template < typename T, char CWARP_SIZE >
 __global__ void delta_afl_compress_gpu (const unsigned int bit_length, T *data, T *compressed_data, T* compressed_data_block_start, unsigned long length)
 {
-    const unsigned int warp_lane = (threadIdx.x % CWARP_SIZE); 
+    const unsigned int warp_lane = get_lane_id();
     const unsigned long data_block = blockIdx.x * blockDim.x + threadIdx.x - warp_lane;
     const unsigned long data_id = data_block * CWORD_SIZE(T) + warp_lane;
     const unsigned long cdata_id = data_block * bit_length + warp_lane;
@@ -219,7 +219,7 @@ __global__ void delta_afl_compress_gpu (const unsigned int bit_length, T *data, 
 template < typename T, char CWARP_SIZE >
 __global__ void delta_afl_decompress_gpu (const unsigned int bit_length, T *compressed_data, T* compressed_data_block_start, T * decompress_data, unsigned long length)
 {
-    const unsigned int warp_lane = (threadIdx.x % CWARP_SIZE); 
+    const unsigned int warp_lane = get_lane_id();
     const unsigned long data_block = blockIdx.x * blockDim.x + threadIdx.x - warp_lane;
     const unsigned long data_id = data_block * CWORD_SIZE(T) + warp_lane;
     const unsigned long cdata_id = data_block * bit_length + warp_lane;
