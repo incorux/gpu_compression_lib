@@ -188,6 +188,20 @@ __device__ __host__ void afl_decompress_base_gpu (const unsigned int bit_length,
 }
 
 template <typename T, char CWARP_SIZE>
+__device__ __host__ void afl_decompress_zeros_gpu (const unsigned int bit_length, unsigned long comp_data_id, unsigned long data_id, T *compressed_data, T *data, unsigned long length)
+{
+    unsigned long pos_decomp = data_id;
+
+    if (pos_decomp > length ) // Decompress not more elements then length
+        return;
+    for (unsigned int i = 0; i < CWORD_SIZE(T) && pos_decomp < length; ++i)
+    {
+        data[pos_decomp] = 0;
+        pos_decomp += CWARP_SIZE;
+    }
+}
+
+template <typename T, char CWARP_SIZE>
 __device__ __host__ T afl_decompress_base_value_gpu (
         const unsigned int bit_length, 
         T *compressed_data, 
@@ -247,6 +261,7 @@ __device__ __host__ void afl_compress_base_value_gpu (
 // This is intentional !!
 #define GFL_SPEC(X, A) \
     template __device__ __host__ void afl_decompress_base_gpu <X, A> (const unsigned int bit_length, unsigned long comp_data_id, unsigned long data_id, X *compressed_data, X *data, unsigned long length);\
+    template __device__ __host__ void afl_decompress_zeros_gpu <X, A> (const unsigned int bit_length, unsigned long comp_data_id, unsigned long data_id, X *compressed_data, X *data, unsigned long length);\
     template __device__ __host__ void afl_compress_base_gpu <X, A> (const unsigned int bit_length, unsigned long, unsigned long, X *, X *, unsigned long );\
     template __device__ __host__ X afl_decompress_base_value_gpu <X, A> ( const unsigned int bit_length, X *compressed_data, unsigned long pos);\
     template __device__ __host__ void afl_compress_base_value_gpu <X, A> ( const unsigned int bit_length, X *compressed_data, unsigned long pos, X value);\

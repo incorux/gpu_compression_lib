@@ -77,7 +77,9 @@ public:
 
         int error_count = 0;
 
-        for (unsigned int _bit_lenght = 1; _bit_lenght < cword; ++_bit_lenght) {
+        /* for (unsigned int _bit_lenght = 1; _bit_lenght < cword; ++_bit_lenght) { */
+        //TODO
+        for (unsigned int _bit_lenght = 23; _bit_lenght < cword; ++_bit_lenght) {
             this->bit_length = _bit_lenght;
             setup(max_size);
 
@@ -178,7 +180,7 @@ TEST_CASE( NAME " benchmark test", "[.][" NAME "][BENCHMARK]" ) {\
             CNAME <int, PARAM> ().run(i, true);\
         for (i = 1000000; i< 100000000; i+= 10 * 1000000)\
             CNAME <int, PARAM> ().run(i, true);\
-        for (i = 100000000; i<= 300000000; i+= 5 * 10000000)\
+        for (i = 100000000; i<= 250000000; i+= 5 * 10000000)\
             CNAME <int, PARAM> ().run(i, true);\
     }\
     SECTION("long: BENCHMARK data set")   {\
@@ -186,17 +188,19 @@ TEST_CASE( NAME " benchmark test", "[.][" NAME "][BENCHMARK]" ) {\
             CNAME <long, PARAM> ().run(i, true);\
         for (i = 1000000; i< 100000000; i+= 10 * 1000000)\
             CNAME <long, PARAM> ().run(i, true);\
-        for (i = 100000000; i<= 150000000; i+= 5 * 10000000)\
+        for (i = 100000000; i<= 125000000 ; i+= 25 * 1000000)\
             CNAME <long, PARAM> ().run(i, true);\
     }\
 }
 
 /* #define RUN_BENCHMARK_TEST(NAME, CNAME, PARAM)\ */
 /* TEST_CASE( NAME " benchmark test", "[.][" NAME "][BENCHMARK][BENCHMARK_ALL]" ) {\ */
-/*     long i;\ */
+/*     unsigned long i;\ */
 /*     SECTION("long: BENCHMARK data set")   {\ */
-/*         for (i = 1048576 ; i< 150000000; i+= 5 * 10000000)\ */
-/*             CNAME <long, PARAM> ().run(i, true);\ */
+/*         CNAME <long, PARAM> test;\ */
+/*         CNAME <int, PARAM> testi;\ */
+/*         for (i = 250000000 ; i<= 300000256; i+= 10* 5 * 10000000)\ */
+/*             CHECK(testi.run(i, true) == 0 );\ */
 /*     }\ */
 /* } */
 
