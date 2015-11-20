@@ -16,7 +16,7 @@ class test_delta: public test_base<T, CWARP_SIZE>
 
         virtual void setup(unsigned long max_size) {
             test_base <T, CWARP_SIZE>::setup(max_size);
-            this->compression_blocks_count = (this->compressed_data_size / sizeof(T)) / CWARP_SIZE + 1;
+            this->compression_blocks_count = (this->compressed_data_size + (sizeof(T) * CWARP_SIZE) - 1) / (sizeof(T) * CWARP_SIZE);
         }
 
         virtual void initializeData(int bit_length) {
@@ -38,8 +38,7 @@ class test_delta: public test_base<T, CWARP_SIZE>
 
     protected:
         T *dev_data_block_start;
-        unsigned int compression_blocks_count;
-        unsigned long dev_data_size_alloc;
+        unsigned long compression_blocks_count;
 };
 
 #endif /* end of include guard: TEST_DELTA_CUH_ISZ6QCRW */
