@@ -1,8 +1,14 @@
 #include "data.cuh"
 #include "../compression/macros.cuh"
+#include <limits>       // std::numeric_limits
 
 static unsigned long __xorshf96_x=123456789, __xorshf96_y=362436069, __xorshf96_z=521288629;
 
+void init_random_generator(){
+    __xorshf96_x=123456789; 
+    __xorshf96_y=362436069;
+    __xorshf96_z=521288629;
+}
 unsigned long xorshf96(void) {          //period 2^96-1
 // This is only for test purposes so it is optimized for speed (true randomness is not needed)
     unsigned long t;
@@ -18,36 +24,94 @@ unsigned long xorshf96(void) {          //period 2^96-1
         return __xorshf96_z;
 }
 
-template <typename T>
-void big_random_block( unsigned long size, int limit_bits, T *data) 
+template <typename T, typename X>
+void __inner_big_random_block( unsigned long size, X mask, T *data) 
 {
-    T mask = NBITSTOMASK(limit_bits);
     for (unsigned long i = 0; i < size; i++)
         data[i] = xorshf96() & mask;
 }
 
 template <typename T>
+void big_random_block( unsigned long size, int limit_bits, T *data) 
+{
+    T mask = NBITSTOMASK(limit_bits);
+    __inner_big_random_block(size, mask, data);
+}
+
+void big_random_block( unsigned long size, int limit_bits, unsigned long *data) 
+{
+    unsigned long mask = LNBITSTOMASK(limit_bits);
+    __inner_big_random_block(size, mask, data);
+}
+
+void big_random_block( unsigned long size, int limit_bits, long *data) 
+{
+    unsigned long mask = LNBITSTOMASK(limit_bits);
+    __inner_big_random_block(size, mask, data);
+}
+
+template <typename T, typename X>
+void __inner_big_random_block_with_decreasing_values( unsigned long size, X mask, T *data) 
+{
+    data[0] = std::numeric_limits<T>::max() - 1;
+    T v = 0;
+    for (unsigned long i = 1; i < size; i++){
+        v = (xorshf96() & mask);
+        if( ((long)data[i-1] - (long)v) >= 0 ){ // ensure that data does not go below 0
+            data[i] = data[i-1] - v;
+        } else {
+            data[i] = 0;
+        }
+    }
+}
+template <typename T>
 void big_random_block_with_decreasing_values( unsigned long size, int limit_bits, T *data) 
 {
     T mask = NBITSTOMASK(limit_bits);
-    T max_value = size * mask;
-    data[0] = max_value;
-    for (unsigned long i = 1; i < size; i++)
-        data[i] = data[i-1] -  (xorshf96() & mask);
+    __inner_big_random_block_with_decreasing_values(size, mask, data);
+}
+
+void big_random_block_with_decreasing_values( unsigned long size, int limit_bits, unsigned long *data) 
+{
+    unsigned long mask = LNBITSTOMASK(limit_bits);
+    __inner_big_random_block_with_decreasing_values(size, mask, data);
+}
+
+void big_random_block_with_decreasing_values( unsigned long size, int limit_bits, long *data) 
+{
+    unsigned long mask = LNBITSTOMASK(limit_bits);
+    __inner_big_random_block_with_decreasing_values(size, mask, data);
+}
+
+template <typename T, typename X>
+void __inner_big_random_block_with_outliers( unsigned long size, int outlier_count, int limit_bits, X outlier_mask,  T *data) 
+{
+    big_random_block(size, limit_bits, data);
+
+    for (int i = 0; i < outlier_count; ++i) {
+        unsigned long p = xorshf96() % size;
+        data[ p ] = xorshf96() & outlier_mask;
+    }
 }
 
 template <typename T>
 void big_random_block_with_outliers( unsigned long size, int outlier_count, int limit_bits, int outlier_bits,  T *data) 
 {
-    big_random_block(size, limit_bits, data);
     unsigned int mask = NBITSTOMASK(limit_bits + outlier_bits);
-
-    for (int i = 0; i < outlier_count; ++i) {
-        int p = xorshf96() % size;
-        data[ p ] = xorshf96() & mask;
-    }
+    __inner_big_random_block_with_outliers( size, outlier_count, limit_bits, mask,  data);
 }
 
+void big_random_block_with_outliers( unsigned long size, int outlier_count, int limit_bits, int outlier_bits,  long *data) 
+{
+    unsigned long mask = LNBITSTOMASK(limit_bits + outlier_bits);
+    __inner_big_random_block_with_outliers( size, outlier_count, limit_bits, mask,  data);
+}
+
+void big_random_block_with_outliers( unsigned long size, int outlier_count, int limit_bits, int outlier_bits,  unsigned long *data) 
+{
+    unsigned long mask = LNBITSTOMASK(limit_bits + outlier_bits);
+    __inner_big_random_block_with_outliers( size, outlier_count, limit_bits, mask,  data);
+}
 
 template <typename T>
 int compare_arrays(T *in1, T *in2, unsigned long size)
