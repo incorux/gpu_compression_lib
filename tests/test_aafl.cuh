@@ -9,29 +9,34 @@ class test_aafl: public test_base<T, CWARP_SIZE>
 {
     public: 
         virtual void allocateMemory() {
-            mmCudaMallocHost(this->manager,(void**)&this->host_data, this->dev_data_size_alloc);
-            mmCudaMallocHost(this->manager,(void**)&this->host_data2, this->dev_data_size_alloc);
 
-            // allocate maximal compressed data size rather than independent allocations for each compression ratio- improves testing time
-            mmCudaMalloc(this->manager, (void **) &this->dev_out, this->dev_data_size_alloc); 
-            mmCudaMalloc(this->manager, (void **) &this->dev_data, this->dev_data_size_alloc);
+            test_base<T, CWARP_SIZE>::allocateMemory();
+            /* mmCudaMallocHost(this->manager,(void**)&this->host_data, this->compressed_data_size); */
+            /* mmCudaMallocHost(this->manager,(void**)&this->host_data2, this->compressed_data_size); */
+
+            /* // allocate maximal compressed data size rather than independent allocations for each compression ratio- improves testing time */
+            /* mmCudaMalloc(this->manager, (void **) &this->dev_out, this->compressed_data_size); */ 
+            /* mmCudaMalloc(this->manager, (void **) &this->dev_data, this->compressed_data_size); */
 
             mmCudaMalloc(this->manager, (void **) &this->dev_data_compressed_data_register, sizeof(long));
-            mmCudaMalloc(this->manager, (void **) &this->dev_data_bit_lenght, compression_blocks_count * sizeof(unsigned int));
+            mmCudaMalloc(this->manager, (void **) &this->dev_data_bit_lenght, compression_blocks_count * sizeof(unsigned char));
             mmCudaMalloc(this->manager, (void **) &this->dev_data_position_id, compression_blocks_count * sizeof(unsigned long));
         }
 
         virtual void setup(unsigned long max_size) {
-            this->max_size = max_size;
-            this->data_size = max_size * sizeof(T);
-            this->cword = sizeof(T) * 8;
+            test_base<T, CWARP_SIZE>::setup(max_size);
 
-            // for size less then cword we actually will need more space than original data
-            this->compressed_data_size = ((max_size < this->cword  ? this->cword : max_size) + 32) * sizeof(T);
-            this->dev_data_size_alloc = this->compressed_data_size;
+            unsigned long data_block_size = CWORD_SIZE(T) * 8;
 
-            this->compression_blocks_count = (this->compressed_data_size / sizeof(T)) / CWARP_SIZE + CWARP_SIZE;
+            /* // for size less then cword we actually will need more space than original data */
+            /* this->compressed_data_size = max_size < data_block_size ? data_block_size : max_size; */
 
+            /* // TODO: added * 32 to allocation space, without there is some under allocation - to be checked !! */
+            /* this->compressed_data_size = ((this->compressed_data_size + data_block_size - 1) / data_block_size) * data_block_size * sizeof(T) + 4048*sizeof(T); */
+
+            this->compression_blocks_count = this->max_size / data_block_size  + 1024;
+
+            this->compressed_data_size += 2048 * sizeof(T);
         }
 
         virtual void initializeData(int bit_length) {
@@ -40,10 +45,10 @@ class test_aafl: public test_base<T, CWARP_SIZE>
 
         // Clean up before compression
         virtual void cleanBeforeCompress() {
-            cudaMemset(this->dev_out, 0, this->dev_data_size_alloc); 
-            cudaMemset(this->dev_data_compressed_data_register, 0, sizeof(long)); 
+            test_base<T, CWARP_SIZE>::cleanBeforeCompress();
 
-            cudaMemset(this->dev_data_bit_lenght, 0, compression_blocks_count * sizeof(unsigned int));
+            cudaMemset(this->dev_data_compressed_data_register, 0, sizeof(long)); 
+            cudaMemset(this->dev_data_bit_lenght, 0, compression_blocks_count * sizeof(unsigned char));
             cudaMemset(this->dev_data_position_id, 0, compression_blocks_count * sizeof(unsigned long));
         }
 
@@ -57,11 +62,10 @@ class test_aafl: public test_base<T, CWARP_SIZE>
 
 
     protected:
-        unsigned int *dev_data_bit_lenght;
+        unsigned char *dev_data_bit_lenght;
         unsigned long *dev_data_position_id;
-        unsigned int compression_blocks_count;
+        unsigned long compression_blocks_count;
         unsigned long *dev_data_compressed_data_register;
-        unsigned long dev_data_size_alloc;
 };
 
 #endif /* end of include guard: TEST_AAFL_CUH_BUYDHFII */
