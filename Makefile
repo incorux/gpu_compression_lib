@@ -1,8 +1,27 @@
-NVCC=/usr/local/cuda-7.0/bin/nvcc
+
+# Naive CUDA search
+NVCC75=/usr/local/cuda-7.5/bin/nvcc
+NVCC70=/usr/local/cuda-7.0/bin/nvcc
+NVCC65=/usr/local/cuda-6.5/bin/nvcc
+NVCC60=/usr/local/cuda-6.0/bin/nvcc
+
+ifneq ("$(wildcard $(NVCC75))","")
+	NVCC = $(NVCC75)
+else ifneq ("$(wildcard $(NVCC70))","")
+	NVCC = $(NVCC70)
+else ifneq ("$(wildcard $(NVCC65))","")
+	NVCC = $(NVCC65)
+else
+	NVCC = $(NVCC60)
+endif
+
+# Use ctags if available
+CTAGS=$(which ctags)
+ifeq ("$(CTAGS)","")
+	CTAGS=echo # ignore if no ctags
+endif
 
 NVCCLIBSFLAGS = -dc 
-#NVCCFLAGS    = -gencode arch=compute_20,code=sm_20 -gencode arch=compute_30,code=sm_30 -gencode arch=compute_35,code=sm_35
-#NVCCFLAGS    = -gencode arch=compute_20,code=sm_20 -gencode arch=compute_35,code=sm_35
 NVCCFLAGS    = -gencode arch=compute_35,code=sm_35
 NVCCFLAGS    += --compiler-options=-Wall,-Wno-unused-function -I$(CURDIR) -O3
 
@@ -49,7 +68,7 @@ $(TESTS_OBJ): %.o : %.cu %.cuh tests/test_base.cuh
 	$(NVCC) $(NVCCFLAGS) $(NVCCLIBSFLAGS) $< -o $@
 
 ctags:
-	@ctags --langmap=c++:+.cu --append=no *.cu*  compression/*.cu* tools/*.cu* tests/*.cu* 2>&1 /dev/null
+	@$(CTAGS) --langmap=c++:+.cu --append=no *.cu*  compression/*.cu* tools/*.cu* tests/*.cu* 2>&1 /dev/null
 
 fixcuda:
 	sudo nvidia-smi -pm 1
