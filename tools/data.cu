@@ -2,6 +2,7 @@
 #include "../compression/macros.cuh"
 #include <limits>       // std::numeric_limits
 
+
 static unsigned long __xorshf96_x=123456789, __xorshf96_y=362436069, __xorshf96_z=521288629;
 
 void init_random_generator(){
@@ -9,7 +10,7 @@ void init_random_generator(){
     __xorshf96_y=362436069;
     __xorshf96_z=521288629;
 }
-unsigned long xorshf96(void) {          //period 2^96-1
+inline unsigned long xorshf96(void) {          //period 2^96-1
 // This is only for test purposes so it is optimized for speed (true randomness is not needed)
     unsigned long t;
         __xorshf96_x ^= __xorshf96_x << 16;
@@ -117,12 +118,17 @@ template <typename T>
 int compare_arrays(T *in1, T *in2, unsigned long size)
 {
     unsigned long count_errors = 0;
-    for(unsigned long i = 0; i < size; i++) {
-        if(in1[i] != in2[i]) {
-            count_errors += 1;
-            compare_arrays_element_print(i, in1[i], in2[i]);
+    unsigned long precheck = 0;
+
+    // on most platforms memcmp should be faster (i.e. simd optimizations)
+    precheck = memcmp(in1, in2, size*sizeof(T)); 
+    if(precheck) // count errors if memcmp fails
+        for(unsigned long i = 0; i < size; i++) {
+            if(in1[i] != in2[i]) {
+                count_errors += 1;
+                compare_arrays_element_print(i, in1[i], in2[i]);
+            }
         }
-    }
     if (count_errors)
         DPRINT(("<================== ERROR ============= size = %ld errors = %ld\n", size, count_errors));
     return count_errors;

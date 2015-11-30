@@ -23,6 +23,13 @@ endif
 
 NVCCLIBSFLAGS = -dc 
 NVCCFLAGS    = -gencode arch=compute_35,code=sm_35
+NVCCFLAGS    += -gencode arch=compute_35,code=sm_35
+NVCCFLAGS    += -gencode arch=compute_53,code=sm_53                             
+NVCCFLAGS    += -gencode=arch=compute_53,code=compute_53                       
+NVCCFLAGS    += -gencode arch=compute_52,code=sm_52                             
+NVCCFLAGS    +=  -gencode=arch=compute_52,code=compute_52                       
+NVCCFLAGS    += -gencode arch=compute_50,code=sm_50                             
+NVCCFLAGS    +=  -gencode=arch=compute_50,code=compute_50
 NVCCFLAGS    += --compiler-options=-Wall,-Wno-unused-function -I$(CURDIR) -O3
 
 TOOLS_SRC=$(wildcard tools/*.cu)

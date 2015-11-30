@@ -77,9 +77,7 @@ public:
 
         int error_count = 0;
 
-        /* for (unsigned int _bit_lenght = 1; _bit_lenght < cword; ++_bit_lenght) { */
-        //TODO
-        for (unsigned int _bit_lenght = 23; _bit_lenght < cword; ++_bit_lenght) {
+        for (unsigned int _bit_lenght = 1; _bit_lenght < cword; ++_bit_lenght) {
             this->bit_length = _bit_lenght;
             setup(max_size);
 
@@ -176,19 +174,19 @@ TEST_CASE( NAME " performance test", "[" NAME "][PERF]" ) {\
 TEST_CASE( NAME " benchmark test", "[.][" NAME "][BENCHMARK]" ) {\
     long i;\
     SECTION("int: BENCHMARK data set")   {\
-        for (i = 1000; i < 1000000; i*=10)\
+        for (i = 1000; i < 10000000; i*=1000)\
             CNAME <int, PARAM> ().run(i, true);\
-        for (i = 1000000; i< 100000000; i+= 10 * 1000000)\
+        for (i = 10000000; i< 100000000; i+= 10000000)\
             CNAME <int, PARAM> ().run(i, true);\
-        for (i = 100000000; i<= 250000000; i+= 5 * 10000000)\
+        for (i = 100000000; i<= 250000000; i+= 25 * 10000000)\
             CNAME <int, PARAM> ().run(i, true);\
     }\
     SECTION("long: BENCHMARK data set")   {\
-        for (i = 1000; i < 1000000; i*=10)\
+        for (i = 1000; i < 10000000; i*=1000)\
             CNAME <long, PARAM> ().run(i, true);\
-        for (i = 1000000; i< 100000000; i+= 10 * 1000000)\
+        for (i = 10000000; i< 100000000; i+= 10000000)\
             CNAME <long, PARAM> ().run(i, true);\
-        for (i = 100000000; i<= 125000000 ; i+= 25 * 1000000)\
+        for (i = 100000000; i<= 125000000 ; i+= 25 * 10000000)\
             CNAME <long, PARAM> ().run(i, true);\
     }\
 }
