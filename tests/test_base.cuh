@@ -170,24 +170,27 @@ TEST_CASE( NAME " performance test", "[" NAME "][PERF]" ) {\
     }\
 }
 
+#define KB(x) (x) * 1000 
+#define MB(x) (x) * 1000 * KB(1)
+#define GB(x) (x) * 1000 * MB(1)
+
 #define RUN_BENCHMARK_TEST(NAME, CNAME, PARAM)\
 TEST_CASE( NAME " benchmark test", "[.][" NAME "][BENCHMARK]" ) {\
-    long i;\
+    unsigned long sizes[] = {\
+        KB(1), KB(5), KB(10), KB(50), KB(100), KB(250), KB(500), KB(750),\
+        MB(1), MB(5), MB(10), MB(50), MB(100), MB(250), MB(500), GB(1)\
+    };\
     SECTION("int: BENCHMARK data set")   {\
-        for (i = 1000; i < 10000000; i*=1000)\
-            CNAME <int, PARAM> ().run(i, true);\
-        for (i = 10000000; i< 100000000; i+= 10000000)\
-            CNAME <int, PARAM> ().run(i, true);\
-        for (i = 100000000; i<= 250000000; i+= 25 * 10000000)\
-            CNAME <int, PARAM> ().run(i, true);\
+        for (int i = 0; i < 16; i++){\
+            CNAME <int, PARAM> test;\
+            CHECK(test.run(sizes[i] / sizeof(int), true) == 0 );\
+        }\
     }\
     SECTION("long: BENCHMARK data set")   {\
-        for (i = 1000; i < 10000000; i*=1000)\
-            CNAME <long, PARAM> ().run(i, true);\
-        for (i = 10000000; i< 100000000; i+= 10000000)\
-            CNAME <long, PARAM> ().run(i, true);\
-        for (i = 100000000; i<= 125000000 ; i+= 25 * 10000000)\
-            CNAME <long, PARAM> ().run(i, true);\
+        for (int i = 0; i < 16; i++){\
+            CNAME <long, PARAM> test;\
+            CHECK(test.run(sizes[i] / sizeof(long), true) == 0 );\
+        }\
     }\
 }
 

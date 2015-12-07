@@ -17,7 +17,8 @@ hosts_config = {
 
 @task
 def sync():
-    project.rsync_project(remote_dir=hosts_config[env.host], extra_opts="--filter=':- .gitignore'", default_opts="-pthrz")
+    exclude_list=['benchmarks*',]
+    project.rsync_project(remote_dir=hosts_config[env.host], exclude=exclude_list, default_opts="-pthrz")
 
 @task
 def make(*args):
