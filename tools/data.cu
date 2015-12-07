@@ -6,10 +6,12 @@
 static unsigned long __xorshf96_x=123456789, __xorshf96_y=362436069, __xorshf96_z=521288629;
 
 void init_random_generator(){
-    __xorshf96_x=123456789; 
-    __xorshf96_y=362436069;
-    __xorshf96_z=521288629;
+    srand (time(NULL));
+    __xorshf96_x=(unsigned long) rand(); 
+    __xorshf96_y=(unsigned long) rand();
+    __xorshf96_z=(unsigned long) rand();
 }
+
 inline unsigned long xorshf96(void) {          //period 2^96-1
 // This is only for test purposes so it is optimized for speed (true randomness is not needed)
     unsigned long t;
@@ -28,6 +30,7 @@ inline unsigned long xorshf96(void) {          //period 2^96-1
 template <typename T, typename X>
 void __inner_big_random_block( unsigned long size, X mask, T *data) 
 {
+    init_random_generator();
     for (unsigned long i = 0; i < size; i++)
         data[i] = xorshf96() & mask;
 }
@@ -39,12 +42,14 @@ void big_random_block( unsigned long size, int limit_bits, T *data)
     __inner_big_random_block(size, mask, data);
 }
 
+template <>
 void big_random_block( unsigned long size, int limit_bits, unsigned long *data) 
 {
     unsigned long mask = LNBITSTOMASK(limit_bits);
     __inner_big_random_block(size, mask, data);
 }
 
+template <>
 void big_random_block( unsigned long size, int limit_bits, long *data) 
 {
     unsigned long mask = LNBITSTOMASK(limit_bits);
@@ -54,6 +59,7 @@ void big_random_block( unsigned long size, int limit_bits, long *data)
 template <typename T, typename X>
 void __inner_big_random_block_with_decreasing_values( unsigned long size, X mask, T *data) 
 {
+    init_random_generator();
     data[0] = std::numeric_limits<T>::max() - 1;
     T v = 0;
     for (unsigned long i = 1; i < size; i++){
@@ -72,12 +78,14 @@ void big_random_block_with_decreasing_values( unsigned long size, int limit_bits
     __inner_big_random_block_with_decreasing_values(size, mask, data);
 }
 
+template <>
 void big_random_block_with_decreasing_values( unsigned long size, int limit_bits, unsigned long *data) 
 {
     unsigned long mask = LNBITSTOMASK(limit_bits);
     __inner_big_random_block_with_decreasing_values(size, mask, data);
 }
 
+template <>
 void big_random_block_with_decreasing_values( unsigned long size, int limit_bits, long *data) 
 {
     unsigned long mask = LNBITSTOMASK(limit_bits);
@@ -87,6 +95,7 @@ void big_random_block_with_decreasing_values( unsigned long size, int limit_bits
 template <typename T, typename X>
 void __inner_big_random_block_with_outliers( unsigned long size, int outlier_count, int limit_bits, X outlier_mask,  T *data) 
 {
+    init_random_generator();
     big_random_block(size, limit_bits, data);
 
     for (int i = 0; i < outlier_count; ++i) {
@@ -102,12 +111,14 @@ void big_random_block_with_outliers( unsigned long size, int outlier_count, int 
     __inner_big_random_block_with_outliers( size, outlier_count, limit_bits, mask,  data);
 }
 
+template <>
 void big_random_block_with_outliers( unsigned long size, int outlier_count, int limit_bits, int outlier_bits,  long *data) 
 {
     unsigned long mask = LNBITSTOMASK(limit_bits + outlier_bits);
     __inner_big_random_block_with_outliers( size, outlier_count, limit_bits, mask,  data);
 }
 
+template <>
 void big_random_block_with_outliers( unsigned long size, int outlier_count, int limit_bits, int outlier_bits,  unsigned long *data) 
 {
     unsigned long mask = LNBITSTOMASK(limit_bits + outlier_bits);

@@ -76,8 +76,11 @@ public:
         pre_setup(max_size);
 
         int error_count = 0;
+        
+        unsigned int min_bit_lenght = (unsigned int)getenv_extract_int("GPU_MIN_BIT_LENGTH", 1, cword, 1);
+        unsigned int max_bit_lenght = (unsigned int)getenv_extract_int("GPU_MAX_BIT_LENGTH", 1, cword, cword);
 
-        for (unsigned int _bit_lenght = 1; _bit_lenght < cword; ++_bit_lenght) {
+        for (unsigned int _bit_lenght = min_bit_lenght; _bit_lenght < max_bit_lenght; ++_bit_lenght) {
             this->bit_length = _bit_lenght;
             setup(max_size);
 
