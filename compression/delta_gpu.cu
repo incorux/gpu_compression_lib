@@ -16,7 +16,6 @@ __device__  void delta_afl_compress_base_gpu (const unsigned int bit_length, uns
     const unsigned long lane = get_lane_id();
     char neighborId = lane - 1;
 
-    /* const unsigned int warp_lane = (threadIdx.x % CWARP_SIZE); */ 
     const unsigned long data_block = ( blockIdx.x * blockDim.x) / CWARP_SIZE + threadIdx.x / CWARP_SIZE;
 
     if (lane == 0 )  {
