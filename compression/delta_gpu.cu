@@ -2,63 +2,6 @@
 #include <stdio.h>
 
 
-__device__ inline long shfl_up(long value, int i, int width=32)
-{
-    int lo, hi;
-    asm volatile("mov.b64 {%0,%1}, %2;":"=r"(lo),"=r"(hi):"l"(value));
-
-    lo =  __shfl_up(lo, i, width); // add zeroLaneValue
-    hi =  __shfl_up(hi, i, width); // add zeroLaneValue
-
-    asm volatile("mov.b64 %0,{%1,%2};":"=l"(value):"r"(lo),"r"(hi));
-
-    return value;
-}
-__device__ int shfl_prefix_sum(int value, int width=32)  // TODO: move to macros and reuse
-{
-    int lane_id = get_lane_id();
-
-    // Now accumulate in log2(32) steps
-#pragma unroll
-    for(int i=1; i<=width; i*=2) {
-        int n = __shfl_up(value, i);
-        if(lane_id >= i) value += n;
-    }
-
-    return value;
-}
-
-__device__ long shfl_prefix_sum(long value, int width=32)  // TODO: move to macros and reuse
-{
-    int lane_id = get_lane_id();
-
-    // Now accumulate in log2(32) steps
-#pragma unroll
-    for(int i=1; i<=width; i*=2) {
-        long n = shfl_up(value, i);
-        if(lane_id >= i) value += n;
-    }
-
-    return value;
-}
-
-__device__ inline int shfl_get_value(int value, int laneId, int width=32)
-{
-    return __shfl(value, laneId, width); // add zeroLaneValue
-}
-
-__device__ inline long shfl_get_value(long value, int laneId, int width=32)
-{
-    int lo, hi;
-    asm volatile("mov.b64 {%0,%1}, %2;":"=r"(lo),"=r"(hi):"l"(value));
-
-    lo =  __shfl(lo, laneId, width); // add zeroLaneValue
-    hi =  __shfl(hi, laneId, width); // add zeroLaneValue
-
-    asm volatile("mov.b64 %0,{%1,%2};":"=l"(value):"r"(lo),"r"(hi));
-
-    return value;
-}
 
 
 /* __device__ long shfl_prefix_sum(long value, int width=32) */ 
@@ -103,11 +46,8 @@ __device__  void delta_afl_compress_base_gpu (const unsigned int bit_length, uns
     for (unsigned int i = 0; i < CWORD_SIZE(T) && pos_data < length; ++i) 
     {
         v1 = data[pos_data];
-        /* T tmp_v1 = v1; // TODO: remove after debug */
         pos_data += CWARP_SIZE;
         
-        //TODO: v1 reduction 
-        /* v2 = __shfl( v1, neighborId, 32); */ 
         v2 = shfl_get_value(v1, neighborId);
 
         if (lane == 0)
@@ -118,7 +58,6 @@ __device__  void delta_afl_compress_base_gpu (const unsigned int bit_length, uns
         } else {
             v1 = v2 - v1;
         }
-        /* printf("Comp %d %d %d\n", threadIdx.x, v1, tmp_v1); */
 
         if (v1_pos >= CWORD_SIZE(T) - bit_length){
             v1_len = CWORD_SIZE(T) - v1_pos;
@@ -141,7 +80,6 @@ __device__  void delta_afl_compress_base_gpu (const unsigned int bit_length, uns
     {
         compressed_data[pos] = value;
     }
-
 }
 
 template <typename T, char CWARP_SIZE>
@@ -168,7 +106,6 @@ __device__ void delta_afl_decompress_base_gpu (
 
     T zeroLaneValue = 0, v2 = 0;
 
-    /* const unsigned int warp_lane = (threadIdx.x % CWARP_SIZE); */ 
     const unsigned long data_block = (blockIdx.x * blockDim.x) / CWARP_SIZE  + threadIdx.x / CWARP_SIZE;
 
     if (lane == 0) {
@@ -193,15 +130,12 @@ __device__ void delta_afl_decompress_base_gpu (
         }
 
         ret = shfl_prefix_sum(ret); // prefix sum deltas 
-        /* v2 = __shfl(zeroLaneValue, 0); // add zeroLaneValue */
         v2 = shfl_get_value(zeroLaneValue, 0);
         ret = v2 - ret;
 
         data[pos_decomp] = ret;
         pos_decomp += CWARP_SIZE;
-        /* printf("Decomp %d %d\n", threadIdx.x, ret); */
 
-        /* v2 = __shfl(ret, 31); // get final ret from lane 31 */
         v2 = shfl_get_value(ret, 31);
 
         if(lane == 0) 
