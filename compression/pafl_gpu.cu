@@ -2,17 +2,9 @@
 #include "afl_gpu.cuh"
 #include "macros.cuh"
 #include "../tools/cuda.cuh"
+
 #include <math.h>
-
 #include <stdio.h>
-
-//TODO: przygotowac kod który po przepełnienu shared będzie transferował dane do global
-
-#define BQ_CAPACITY 1800 // TODO: FINE TUNE
-#define BQ_CAPACITY_ALTERNATE 512 // TODO: FINE TUNE
-
-#define WORD_SIZE 32
-#define WARP_SIZE 32
 
 #define BIT_SET(a,b) ((a) |= (1UL<<(b)))
 #define BIT_CLEAR(a,b) ((a) &= ~(1UL<<(b)))
@@ -38,7 +30,6 @@ __device__  void pafl_compress_base_gpu3 (
     int exception_counter = 0;
 
     T exception_buffer[8];
-    /* for(int i=0; i<64; i++) exception_buffer[i]=-1; */
     unsigned long position_mask = 0;
 
     for (unsigned int i = 0; i < CWORD_SIZE(T) && pos_data < length; ++i) 
@@ -47,11 +38,8 @@ __device__  void pafl_compress_base_gpu3 (
 
         if(BITLEN(v1) >= bit_length){
             exception_buffer[exception_counter] = v1;
-            /* exception_buffer[exception_counter] = i; */
             exception_counter ++;
             BIT_SET(position_mask, i);
-            /* printf("IN: %d %ld \n", i, position_mask); */
-            /* if (i==0) printf(" %d = %d\n", i, position_mask); */
         }
 
         pos_data += CWARP_SIZE;
@@ -81,40 +69,22 @@ __device__  void pafl_compress_base_gpu3 (
     unsigned long local_counter = 0;
 
     int warp_exception_counter = shfl_prefix_sum(exception_counter);
-    /* if (warp_exception_counter > 32) printf(">>%d<<\n", warp_exception_counter); */
 
     if(lane_id == 31 && warp_exception_counter > 0){
         local_counter = atomicAdd((unsigned long long int *)global_patch_count, (unsigned long long int)warp_exception_counter);
-        /* if (local_counter > length) */
-        /*     printf("pos %d %ld %ld %d local_counter\n", bit_length, local_counter, length, exception_counter); */
     }
 
     local_counter = shfl_get_value((long)local_counter, 31);
     
-    /* if(exception_counter == 0) */
-    /*     return; */
-
-    /* printf("pos %ld %ld local_counter\n", local_counter, length); */
-    /* return; */
-    /* printf("position mask %d \n", position_mask); */
     for (int i = 0; i < exception_counter; ++i)
         global_patch_values[local_counter + warp_exception_counter - exception_counter + i] = exception_buffer [i]; 
 
-    /* int count_exceptions = 0; */
     for (unsigned int i = 0, j = 0; i < exception_counter && j < CWORD_SIZE(T); j++){
         if (BIT_CHECK(position_mask, j)) {
             global_patch_index[local_counter + warp_exception_counter - exception_counter + i] = data_id + j * CWARP_SIZE; 
-            /* if(data_id + j * CWARP_SIZE >= length) */
-            /* printf("Exceptions In %ld %ld %ld %ld\n", local_counter + warp_exception_counter + i, global_patch_index[local_counter + warp_exception_counter + i], data_id + j * CWARP_SIZE, length); */
             i++;
-            /* count_exceptions = i; */
         }
     }
-    /* if(exception_counter != count_exceptions) printf("Blad %d %d %d\n",exception_counter, count_exceptions, exception_buffer[0]); */
-
-
-    /* unsigned long tid = blockIdx.x * blockDim.x + threadIdx.x; */
-    /* printf("Exceptions In %ld %d %d %ld \n", local_counter, warp_exception_counter, exception_counter, tid); */
 }
 
 template < typename T, char CWARP_SIZE >
@@ -156,275 +126,11 @@ __global__ void patch_apply_gpu3 (
 
     unsigned long patch_length = *global_data_patch_count;
 
-    //TODO: Run decompression on selected starting threads
-    /* printf("PATCH count %ld\n", patch_length); */
     if (tid < patch_length)
     {
         unsigned long idx = global_data_patch_index[tid];
         T val = global_data_patch_values[tid];
-
-
-        /* if(idx < length) //TODO */
-            decompressed_data[idx] = val;
-        /* else */
-        /* printf( */
-        /* "Exceptions out tid = %ld value = %ld idx = %ld length = %ld patch_length=%ld T = %d\n", */ 
-        /*         tid, global_data_patch_values[tid], global_data_patch_index[tid], length, patch_length, sizeof(T)); */
-    }
-}
-
-
-template <typename T, char CWARP_SIZE> 
-__global__ void pafl_compress_gpu_alternate2 (
-        pafl_header comp_h, 
-        T *data, 
-        T *compressed_data, 
-        unsigned long length,
-
-        T *global_queue_patch_values,
-        unsigned long *global_queue_patch_index,
-        unsigned long *global_queue_patch_count
-        )
-{
-    unsigned long tid =  blockIdx.x * blockDim.x + threadIdx.x;
-
-    __shared__ T private_warp_patch_values[32][16];
-    __shared__ T private_warp_patch_index [32][16];
-
-    /*volatile __shared__ int private_warp_patch_count[32];*/
-    __shared__ int private_warp_patch_count[32];
-
-    __shared__ T private_block_patch_values[32*16];
-    __shared__ T private_block_patch_index [32*16];
-    __shared__ long private_block_patch_count [1];
-    __shared__ long old_global_patch_count[1];
-
-    T mask = ~NBITSTOMASK(comp_h.bit_length);
-
-    if (threadIdx.x == 0) 
-        private_block_patch_count[0] = 0;
-
-    if (threadIdx.x < 32) // Warp_queue 
-        private_warp_patch_count[threadIdx.x] = 0;
-
-    __syncthreads(); // Gather outliers into warp_queue
-
-    int warp_lane = threadIdx.x % 32; 
-
-    if (tid < length) //PATCH
-    {
-        T v1 = data[tid];
-        if ( v1 & mask) {
-            int p = atomicAdd(private_warp_patch_count+warp_lane, 1);
-            /*int p = private_warp_patch_count[warp_lane]++;*/
-            private_warp_patch_index[warp_lane][p] = (int)tid;
-            private_warp_patch_values[warp_lane][p] = (v1 >> comp_h.bit_length);
-        }
-    }
-
-    __syncthreads(); // Warp_queue to block_queue
-    if (threadIdx.x < 32) 
-    { 
-        long c = private_warp_patch_count[threadIdx.x];
-        if ( c > 0) {
-            long pos = atomicAdd((unsigned long long int*) private_block_patch_count, (unsigned long long int)c);
-            for (int i = 0; i < c; ++i)
-            {
-                private_block_patch_values[pos+i] = private_warp_patch_values[threadIdx.x][i];
-                private_block_patch_index[pos+i] = private_warp_patch_index[threadIdx.x][i];
-            }
-        }
-    }
-
-    __syncthreads(); // Block queue to global queue
-
-    unsigned long pcount = private_block_patch_count[0];
-
-    if (threadIdx.x == 0) {
-        old_global_patch_count[0] = atomicAdd((unsigned long long int *)global_queue_patch_count, (unsigned long long int)pcount);
-    }
-
-    __syncthreads();
-
-    unsigned long gpos = old_global_patch_count[0]; // get global memory index
-
-    //TODO: Transfer compressed to global ??
-    // Transfer data from shared to global, write in paralel outliers to global memory
-    if (threadIdx.x < pcount) {
-        global_queue_patch_values[gpos + threadIdx.x] = private_block_patch_values[threadIdx.x];
-        global_queue_patch_index[gpos + threadIdx.x] = private_block_patch_index[threadIdx.x];
-    }
-}
-
-template <typename T, char CWARP_SIZE> 
-__global__ void pafl_compress_gpu_alternate (
-        pafl_header comp_h, 
-        int *data, 
-        int *compressed_data, 
-        unsigned long length,
-
-        int *global_queue_patch_values,
-        int *global_queue_patch_index,
-        int *global_queue_patch_count
-        )
-{
-    unsigned long tid =  blockIdx.x * blockDim.x + threadIdx.x;
-
-    __shared__ int private_block_patch_values[32*16];
-    __shared__ int private_block_patch_index [32*16];
-    __shared__ int private_block_patch_count [1];
-    __shared__ int old_global_patch_count[1];
-
-    /*unsigned int mask = NBITSTOMASK(comp_h.bit_length + comp_h.patch_bit_length);*/
-    unsigned int mask = ~NBITSTOMASK(comp_h.bit_length);
-
-    if (threadIdx.x == 0) 
-        private_block_patch_count[0] = 0;
-
-    __syncthreads(); // Gather outliers into warp_queue
-    if (tid < length) //PATCH
-    {
-        int v1 = data[tid];
-        if ( v1 & mask) {
-            int p = atomicAdd(private_block_patch_count,1);
-            private_block_patch_index[p] = (int) tid; //TODO: fis later
-            private_block_patch_values[p] = (v1 >> comp_h.bit_length);//GETNPBITS(v1, comp_h.patch_bit_length, comp_h.bit_length);
-            /*printf(">> tid = %ld, %d, v1 = %d p=%d b=%d rv1=%d p_b_l=%d<<\n", tid, GETNPBITS(private_block_patch_index[p], BITLEN(length) , data[tid], private_block_patch_values[p], GETNBITS(v1, comp_h.bit_length), GETNBITS(v1, comp_h.bit_length) | (private_block_patch_values[p] << comp_h.bit_length), comp_h.bit_length);*/
-        }
-    }
-
-    __syncthreads(); // Block queue to global queue
-
-    int pcount = private_block_patch_count[0];
-
-    if (threadIdx.x == 0 && pcount > 0) {
-        old_global_patch_count[0] = atomicAdd(global_queue_patch_count, pcount);
-    }
-
-    __syncthreads();
-
-    int gpos = old_global_patch_count[0]; // get global memory index
-
-    // Transfer data from shared to global, write in paralel outliers to global memory
-    if (threadIdx.x < pcount) {
-        global_queue_patch_values[gpos + threadIdx.x] = private_block_patch_values[threadIdx.x];
-        global_queue_patch_index[gpos + threadIdx.x] = private_block_patch_index[threadIdx.x];
-        /*printf("IDX %d %d", private_block_patch_index[threadIdx.x], private_block_patch_values[threadIdx.x]);*/
-    }
-}
-
-template <typename T, char CWARP_SIZE> 
-__global__ void pafl_compress_gpu (
-        pafl_header comp_h, 
-        T *data, 
-        T *compressed_data, 
-        unsigned long length,
-
-        T *global_queue_patch_values,
-        T *global_queue_patch_index,
-        long *global_queue_patch_count,
-
-        T *global_data_patch_values,
-        T *global_data_patch_index,
-        T *global_data_patch_count
-        )
-{
-    int warp_th = (threadIdx.x % WARP_SIZE); 
-    unsigned long pos = blockIdx.x * blockDim.x + threadIdx.x - warp_th;
-    unsigned long data_id = pos * WARP_SIZE + warp_th;
-    unsigned long cdata_id = pos * comp_h.bit_length + warp_th;
-
-    __shared__ int private_patch_values[BQ_CAPACITY];
-    __shared__ int private_patch_index[BQ_CAPACITY];
-
-    __shared__ int private_patch_count[1];
-    __shared__ int old_global_patch_count[1];
-
-    if(threadIdx.x == 0) 
-        private_patch_count[0] = 0;
-
-    __syncthreads();
-
-    pafl_compress_base_gpu <T, CWARP_SIZE>(
-            comp_h, 
-            data_id, 
-            cdata_id, 
-
-            data, 
-            compressed_data, 
-            length,
-
-            private_patch_values,
-            private_patch_index,
-            private_patch_count,
-
-            global_queue_patch_values,
-            global_queue_patch_index,
-            global_queue_patch_count
-            );
-
-    __syncthreads(); // Wait for all PATCHED values to be stored in shared
-
-    // get outliers count from shared memory
-    long pcount = private_patch_count[0] > BQ_CAPACITY ? BQ_CAPACITY : private_patch_count[0]; //warning if pcount > BQ_CAPACITY transfer only BQ_CAPACITY
-
-    // reserve space for outliers
-    if (threadIdx.x == 0) {
-        old_global_patch_count[0] = atomicAdd((unsigned long long int *)global_queue_patch_count, (unsigned long long int)pcount);
-        /*printf("b %d c %d\n", blockIdx.x, private_patch_count[0] );*/
-    }
-
-    __syncthreads();
-
-    int gpos = old_global_patch_count[0]; // get global memory index
-
-    // Transfer data from shared to global, write in paralel outliers to global memory
-    for (int i = threadIdx.x; i < pcount; i += blockDim.x) {
-        global_queue_patch_values[gpos + i] = private_patch_values[i];
-        global_queue_patch_index[gpos + i] = private_patch_index[i];
-    }
-
-    /*__syncthreads(); // Wait for all PATCHED values in global*/
-
-
-    /*//TODO: tak raczej nie mozna ! nie mamy gwarancji ze wszystkie bloki skoncza dzialac w tym samym momencie */
-
-    /*// Reuse current threads for PATCH compression*/
-    /*int patch_count = global_queue_patch_count[0];*/
-    
-    /*int patch_values_bit_length = comp_h.patch_bit_length;*/
-    /*//Compress values*/
-    /*cdata_id = pos * patch_values_bit_length + warp_th; // reuse for PATCH compression*/
-    /*afl_compress_base_gpu<int, 32>(patch_values_bit_length, data_id, cdata_id, global_queue_patch_values, global_data_patch_values, patch_count);*/
-
-    /*int patch_index_bit_length = BITLEN(length);*/
-    /*//Compress index*/
-    /*cdata_id = pos * patch_index_bit_length + warp_th; // reuse for PATCH compression*/
-    /*afl_compress_base_gpu<int, 32>(patch_index_bit_length, data_id, cdata_id, global_queue_patch_values, global_data_patch_index, patch_count);*/
-}
-
-template <typename T, char CWARP_SIZE> 
-__global__ void patch_apply_gpu (
-        pafl_header comp_h,
-        T *decompressed_data,
-        unsigned long length,
-        
-        T *global_data_patch_values,
-        unsigned long *global_data_patch_index,
-        unsigned long *global_data_patch_count
-        ) //TODO: fix params list
-{
-    unsigned long tid = blockIdx.x * blockDim.x + threadIdx.x;
-
-    T patch_length = *global_data_patch_count;
-
-    //TODO: Run decompression on selected starting threads
-    if (tid < patch_length)
-    {
-        T idx = afl_decompress_base_value_gpu<unsigned long, CWARP_SIZE>((int)log2((float)length)+1, global_data_patch_index, tid);
-        T val = afl_decompress_base_value_gpu<T, CWARP_SIZE>(comp_h.patch_bit_length, global_data_patch_values, tid);
-
-        decompressed_data[idx] |= (val << comp_h.bit_length); //TODO: check if idx <length ??
+        decompressed_data[idx] = val;
     }
 }
 
@@ -447,17 +153,6 @@ __host__ void run_pafl_compress_gpu_alternate(
     const unsigned int block_size = CWARP_SIZE * 8; // better occupancy 
     const unsigned long block_number = (length + block_size * CWORD_SIZE(T) - 1) / (block_size * CWORD_SIZE(T));
 
-    /* pafl_compress_gpu_alternate2 <T, CWARP_SIZE> <<<block_number, block_size>>> ( */
-    /*         comp_h, */ 
-    /*         data, */ 
-    /*         compressed_data, */ 
-    /*         length, */
-
-    /*         global_queue_patch_values, */
-    /*         global_queue_patch_index, */
-    /*         global_queue_patch_count */
-    /*         ); */
-
     pafl_compress_gpu3 <T, CWARP_SIZE> <<<block_number, block_size>>> (
             comp_h.bit_length, 
             data, 
@@ -471,77 +166,8 @@ __host__ void run_pafl_compress_gpu_alternate(
 
 
     cudaErrorCheck();
-    return;
-
-    /* //Patch compress */
-    /* unsigned long patch_count; */
-    /* gpuErrchk(cudaMemcpy(&patch_count, global_queue_patch_count, sizeof(unsigned long), cudaMemcpyDeviceToHost)); */
-    /* if (patch_count > 0) */
-    /* { */
-    /*     /1* block_size = WARP_SIZE * 8; // better occupancy *1/ */ 
-    /*     /1* block_number = (patch_count + block_size * WARP_SIZE - 1) / (block_size * WARP_SIZE); *1/ */
-
-    /*     run_afl_compress_gpu<T, CWARP_SIZE>(comp_h.patch_bit_length, global_queue_patch_values, global_data_patch_values, patch_count); */
-    /*     run_afl_compress_gpu<unsigned long, CWARP_SIZE>((unsigned int)log2((float)length)+1, global_queue_patch_index, global_data_patch_index, patch_count); */
-    /*     /1* afl_compress_gpu <T, CWARP_SIZE><<<block_number, block_size>>> (comp_h.patch_bit_length, global_queue_patch_values, global_data_patch_values, patch_count); *1/ */
-
-    /*     /1* afl_compress_gpu <T, CWARP_SIZE> <<<block_number, block_size>>> ((int)log2((float)length)+1, global_queue_patch_index, global_data_patch_index, patch_count); *1/ */
-    /* } */
-
-    /* run_afl_compress_gpu<T, CWARP_SIZE>(comp_h.bit_length, data, compressed_data, length); */
-    /* /1* block_size = WARP_SIZE * 8; // better occupancy *1/ */ 
-    /* /1* block_number = (length + block_size * WARP_SIZE - 1) / (block_size * WARP_SIZE); *1/ */
-
-    /* /1* afl_compress_gpu <T, CWARP_SIZE> <<<block_number, block_size>>> (comp_h.bit_length, data, compressed_data, length); *1/ */
 }
 
-template <typename T, char CWARP_SIZE> 
-__host__ void run_pafl_compress_gpu(
-        pafl_header comp_h, 
-        T *data, 
-        T *compressed_data, 
-        unsigned long length,
-        
-        T *global_queue_patch_values,
-        T *global_queue_patch_index,
-        long *global_queue_patch_count,
-
-        T *global_data_patch_values,
-        T *global_data_patch_index,
-        T *global_data_patch_count
-        )
-{
-    int block_size = WARP_SIZE * 8; // better occupancy
-    unsigned long block_number = (length + block_size * WARP_SIZE - 1) / (block_size * WARP_SIZE);
-
-    pafl_compress_gpu <T, CWARP_SIZE> <<<block_number, block_size>>> (
-            comp_h, 
-            data, 
-            compressed_data, 
-            length,
-
-            global_queue_patch_values,
-            global_queue_patch_index,
-            global_queue_patch_count,
-
-            global_data_patch_values,
-            global_data_patch_index,
-            global_data_patch_count
-            );
-    cudaErrorCheck();
-
-    //Patch compress
-    int patch_count;
-    gpuErrchk(cudaMemcpy(&patch_count, global_queue_patch_count, sizeof(int), cudaMemcpyDeviceToHost));
-    if (patch_count > 0)
-    {
-        block_size = WARP_SIZE * 8; // better occupancy 
-        block_number = (patch_count + block_size * WARP_SIZE - 1) / (block_size * WARP_SIZE);
-
-        afl_compress_gpu <T, CWARP_SIZE> <<<block_number, block_size>>> (comp_h.patch_bit_length, global_queue_patch_values, global_data_patch_values, patch_count);
-        afl_compress_gpu <T, CWARP_SIZE> <<<block_number, block_size>>> ((int)log2((float)length)+1, global_queue_patch_index, global_data_patch_index, patch_count);
-    }
-}
 
 template <typename T, char CWARP_SIZE> 
 __host__ void run_pafl_decompress_gpu(
@@ -555,14 +181,13 @@ __host__ void run_pafl_decompress_gpu(
         unsigned long *global_data_patch_count
         )
 {
-    int block_size = WARP_SIZE * 8; // better occupancy
-    unsigned long block_number = (length + block_size * WARP_SIZE - 1) / (block_size * WARP_SIZE);
+    int block_size = CWARP_SIZE * 8; // better occupancy
+    unsigned long block_number = (length + block_size * CWARP_SIZE - 1) / (block_size * CWARP_SIZE);
     afl_decompress_gpu <T, CWARP_SIZE> <<<block_number, block_size>>> (comp_h.bit_length, compressed_data, data, length);
 
     cudaErrorCheck();
-    /* return; */
-
-    patch_apply_gpu3 <T, CWARP_SIZE> <<<block_number * WARP_SIZE, block_size>>> (
+    
+    patch_apply_gpu3 <T, CWARP_SIZE> <<<block_number * CWARP_SIZE, block_size>>> (
             comp_h, 
             data, 
             length,
@@ -571,72 +196,6 @@ __host__ void run_pafl_decompress_gpu(
             global_data_patch_index,
             global_data_patch_count
             );
-}
-
-template <typename T, char CWARP_SIZE> 
-__device__  void pafl_compress_base_gpu (
-        pafl_header comp_h, 
-
-        unsigned long data_id, 
-        unsigned long comp_data_id, 
-
-        T *data, 
-        T *compressed_data, 
-        unsigned long length,
-
-        T *private_patch_values,
-        T *private_patch_index,
-        long *private_patch_count,
-
-        T *global_patch_values,
-        T *global_patch_index,
-        long *global_patch_count
-        )
-{
-    int v1, value = 0;
-    unsigned int v1_pos=0, v1_len;
-    unsigned long pos=comp_data_id, pos_decomp=data_id;
-    T mask = ~NBITSTOMASK(comp_h.bit_length);
-
-    for (unsigned int i = 0; i < WARP_SIZE && pos_decomp < length; ++i)
-    {
-        v1 = data[pos_decomp];
-        pos_decomp += WARP_SIZE;
-
-        if (v1_pos + comp_h.bit_length >= WORD_SIZE){
-            v1_len = WORD_SIZE - v1_pos;
-            value = value | (GETNBITS(v1, v1_len) << v1_pos);
-
-            compressed_data[pos] = value;
-
-            v1_pos = comp_h.bit_length - v1_len;
-            value = GETNPBITS(v1, v1_pos, v1_len); 
-
-            pos += WARP_SIZE;  
-        } else {
-            v1_len = comp_h.bit_length;
-            value = value | (GETNBITS(v1, v1_len) << v1_pos);
-            v1_pos += v1_len;
-        }
-
-        // check if value is outlier, if so write it to shared memory (or global if shared is full)
-        if ( v1 & mask) {
-            unsigned long p_pos = atomicAdd((unsigned long long int*)private_patch_count, 1);
-            if (p_pos < BQ_CAPACITY) {
-                private_patch_values[p_pos] = (v1 >> comp_h.bit_length);
-                private_patch_index[p_pos] = (int)pos_decomp;
-            } else {
-                // in case shared memory is full
-                p_pos = atomicAdd((unsigned long long int*)global_patch_count, (unsigned long long int)1);
-
-                global_patch_values[p_pos] = (v1 >> comp_h.bit_length);
-                global_patch_index[p_pos] = (int)pos_decomp;
-            }
-        }
-    }
-
-    if (pos_decomp >= length  && pos_decomp < length + WARP_SIZE)
-        compressed_data[pos] = value;
 }
 
 #define GFL_SPEC(X, A) \
@@ -648,14 +207,3 @@ FOR_EACH(AFL_SPEC, int, long)
 
 #define FL_SPEC(X) GFL_SPEC(X, 1)
 FOR_EACH(FL_SPEC, int, long)
-
-/*
-TODO: mozna to jeszcze bardziej poprawic (tzn. dokonywac kompresji w locie poprzez atomowe operacje bitowe
-tzn. kazdy z nich dostaje id elementu, wylicza ktorych elementow to dotyczy i robi na nich atomowe OR
-Wazne pamietac o wyzerowaniu shared memory na poczatku
-*/
-/*
-TODO:
-  * kompresujemy dane w shared i zapisujemy do global (wyrownojemy kompresje - tzn. nadmiarowe elementy zapisujemy do global)
-  * na koncu kompresuj dane z global (threadfence albo nowe wywolanie)
-  */
