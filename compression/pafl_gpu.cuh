@@ -14,16 +14,16 @@ __global__ void pafl_compress_gpu (
         unsigned long length,
         
         T *global_queue_patch_values,
-        T *global_queue_patch_index,
-        T *global_queue_patch_count,
+        unsigned long *global_queue_patch_index,
+        unsigned long *global_queue_patch_count,
 
         T *global_data_patch_values,
-        T *global_data_patch_index,
-        T *global_data_patch_count
+        unsigned long *global_data_patch_index,
+        unsigned long *global_data_patch_count
         );
 
 template <typename T, char CWARP_SIZE> 
-__global__ void pafl_decompress_gpu (pafl_header comp_h, int *compressed_data, int * decompress_data, unsigned long length);
+__global__ void pafl_decompress_gpu (pafl_header comp_h, T *compressed_data, T* decompress_data, unsigned long length);
 
 template <typename T, char CWARP_SIZE> 
 __device__ void pafl_compress_base_gpu (
@@ -34,7 +34,7 @@ __device__ void pafl_compress_base_gpu (
 
         T *data, 
         T *compressed_data, 
-        unsigned long length,
+        unsigned long length ,
 
         T *private_patch_values,
         T *private_patch_index,
@@ -56,7 +56,7 @@ __host__ void run_pafl_decompress_gpu(
         unsigned long length,
         
         T *global_data_patch_values,
-        T *global_data_patch_index,
+        unsigned long *global_data_patch_index,
         unsigned long *global_data_patch_count
         );
 
@@ -84,11 +84,11 @@ __host__ void run_pafl_compress_gpu_alternate(
         unsigned long length,
         
         T *global_queue_patch_values,
-        T *global_queue_patch_index,
+        unsigned long *global_queue_patch_index,
         unsigned long *global_queue_patch_count,
 
         T *global_data_patch_values,
-        T *global_data_patch_index,
+        unsigned long *global_data_patch_index,
         unsigned long *global_data_patch_count
         );
 

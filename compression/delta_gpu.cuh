@@ -7,8 +7,6 @@
 
 /* template <typename T> __global__ void delta_decompress_gpu (T *compressed_data, T *spoints, T *data, unsigned long length, unsigned int spoints_length, int width=32); */
 
-#define WARP_SZ 32
-__device__ inline int get_lane_id(void) { return threadIdx.x % WARP_SZ; } //TODO: move to macros and reuse
 
 
 template < typename T, char CWARP_SIZE > __host__ void run_delta_afl_decompress_gpu(const unsigned int bit_length, T *compressed_data, T *compressed_data_block_start, T *data, unsigned long length);

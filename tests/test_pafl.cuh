@@ -8,32 +8,34 @@ class test_pafl: public test_base<T, CWARP_SIZE>
 {
     public: 
         virtual void allocateMemory() {
-            mmCudaMallocHost(this->manager,(void**)&this->host_data, this->data_size);
-            mmCudaMallocHost(this->manager,(void**)&this->host_data2, this->data_size);
+            /* mmCudaMallocHost(this->manager,(void**)&this->host_data, this->data_size); */
+            /* mmCudaMallocHost(this->manager,(void**)&this->host_data2, this->data_size); */
 
-            // allocate maximal compressed data size rather than independent allocations for each compression ratio- improves testing time
-            mmCudaMalloc(this->manager, (void **) &this->dev_out, this->data_size); 
-            mmCudaMalloc(this->manager, (void **) &this->dev_data, this->data_size);
+            /* // allocate maximal compressed data size rather than independent allocations for each compression ratio- improves testing time */
+            /* mmCudaMalloc(this->manager, (void **) &this->dev_out, this->data_size); */ 
+            /* mmCudaMalloc(this->manager, (void **) &this->dev_data, this->data_size); */
 
-            mmCudaMalloc(this->manager, (void **) &this->dev_data_patch_count, sizeof(T));
-            mmCudaMalloc(this->manager, (void **) &this->dev_data_patch_index, outlier_data_size);
+
+
             mmCudaMalloc(this->manager, (void **) &this->dev_data_patch_values, outlier_data_size);
-            mmCudaMalloc(this->manager, (void **) &this->dev_queue_patch_count, sizeof(T));
-            mmCudaMalloc(this->manager, (void **) &this->dev_queue_patch_index, outlier_data_size);
-            mmCudaMalloc(this->manager, (void **) &this->dev_queue_patch_values, outlier_data_size);
+            mmCudaMalloc(this->manager, (void **) &this->dev_data_patch_index, (outlier_count + 1024) * sizeof(unsigned long));
+
+            mmCudaMalloc(this->manager, (void **) &this->dev_data_patch_count, sizeof(unsigned long));
+
+            test_base <T, CWARP_SIZE>::allocateMemory();
+
+            /* mmCudaMalloc(this->manager, (void **) &this->dev_queue_patch_count, sizeof(unsigned long)); */
+            /* mmCudaMalloc(this->manager, (void **) &this->dev_queue_patch_index, outlier_count * sizeof(unsigned long)); */
+            /* mmCudaMalloc(this->manager, (void **) &this->dev_queue_patch_values, outlier_data_size); */
         }
 
         virtual void setup(unsigned long max_size) {
+            test_base <T, CWARP_SIZE>::setup(max_size);
             this->outlier_percent = 0.1;
-            this->max_size = max_size;
-            this->cword = sizeof(T) * 8;
-            this->data_size = max_size * sizeof(T);
 
             this->outlier_count = max_size * this->outlier_percent;
-            this->outlier_data_size = this->outlier_count * sizeof(T);
-
-            // for size less then cword we actually will need more space than original data
-            this->compressed_data_size = (max_size < this->cword  ? this->cword : max_size) * sizeof(T);
+            /* this->outlier_count = 100; */
+            this->outlier_data_size = (this->outlier_count + 1024) * sizeof(T);
         }
 
         virtual void initializeData(int bit_length) {
@@ -46,26 +48,45 @@ class test_pafl: public test_base<T, CWARP_SIZE>
 
         // Clean up before compression
         virtual void cleanBeforeCompress() {
-            cudaMemset(this->dev_out, 0, this->data_size); 
-            cudaMemset(this->dev_data_patch_count, 0,  sizeof(T)); 
-            cudaMemset(this->dev_queue_patch_count, 0, sizeof(T)); 
+            test_base <T, CWARP_SIZE>::cleanBeforeCompress();
+            cudaMemset(this->dev_data_patch_count, 0,  sizeof(unsigned long)); 
+            /* cudaMemset(this->dev_data_patch_index, 0,  (outlier_count + 1024) * sizeof(unsigned long)); */ 
+            /* cudaMemset(this->dev_data_patch_values, 0,  (outlier_count + 1024) * sizeof(T)); */ 
+            /* cudaMemset(this->dev_queue_patch_count, 0, sizeof(unsigned long)); */ 
         }
 
         virtual void compressData(int bit_length) {
+            /* run_pafl_compress_gpu_alternate <T,CWARP_SIZE> ( */
+            /*     this->comp_h, */
+            /*     this->dev_data, */
+            /*     this->dev_out, */
+            /*     this->max_size, */
+
+            /*     this->dev_queue_patch_values, */
+            /*     this->dev_queue_patch_index, */
+            /*     this->dev_queue_patch_count, */
+
+            /*     this->dev_data_patch_values, */
+            /*     this->dev_data_patch_index, */
+            /*     this->dev_data_patch_count */
+            /*     ); */
+
             run_pafl_compress_gpu_alternate <T,CWARP_SIZE> (
                 this->comp_h,
                 this->dev_data,
                 this->dev_out,
                 this->max_size,
 
-                this->dev_queue_patch_values,
-                this->dev_queue_patch_index,
-                this->dev_queue_patch_count,
+                this->dev_data_patch_values,
+                this->dev_data_patch_index,
+                this->dev_data_patch_count,
 
                 this->dev_data_patch_values,
                 this->dev_data_patch_index,
                 this->dev_data_patch_count
                 );
+
+    cudaErrorCheck();
         }
 
         virtual void decompressData(int bit_length) {
@@ -77,16 +98,22 @@ class test_pafl: public test_base<T, CWARP_SIZE>
 
                 this->dev_data_patch_values,
                 this->dev_data_patch_index,
-                this->dev_queue_patch_count
+                this->dev_data_patch_count
+                /* this->dev_queue_patch_count */
                 );
         }
 
     protected:
-        T *dev_data_patch_index, *dev_data_patch_values;
-        unsigned long *dev_data_patch_count, *dev_queue_patch_count;
-        T *dev_queue_patch_index, *dev_queue_patch_values; 
-        T outlier_count;
-        T outlier_data_size;
+        unsigned long *dev_data_patch_index;
+        unsigned long *dev_data_patch_count;
+        T *dev_data_patch_values;
+
+        /* unsigned long *dev_queue_patch_count; */
+        /* unsigned long *dev_queue_patch_index; */
+        /* T *dev_queue_patch_values; */ 
+
+        unsigned long outlier_count;
+        unsigned long outlier_data_size;
         float outlier_percent;
         pafl_header comp_h;
 };

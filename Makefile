@@ -30,10 +30,7 @@ else
 endif
 
 # Use ctags if available
-CTAGS=$(which ctags)
-ifeq ("$(CTAGS)","")
-	CTAGS=echo # ignore if no ctags
-endif
+CTAGS=ctags
 
 NVCCLIBSFLAGS = -dc 
 
@@ -53,9 +50,9 @@ TESTS_SRC=$(wildcard tests/test*.cu)
 TESTS_OBJ = $(TESTS_SRC:.cu=.o)
 TESTS_RUNER = tests/run_tests.out
 
-PROGS = multi_gpu_transfer.out compression_tests.out test.out
+#PROGS = multi_gpu_transfer.out compression_tests.out test.out
 
-all:$(PROGS) $(TESTS_RUNER) ctags
+all:$(PROGS) $(TESTS_RUNER) 
 
 debug: NVCCFLAGS += -g -G 
 debug: all

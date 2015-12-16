@@ -12,6 +12,8 @@
 #define _unused(x) x __attribute__((unused))
 #define convert_struct(n, s)  struct sgn {signed int x:n;} __attribute__((unused)) s
 
+__device__ inline int get_lane_id(int warp_size=32) { return threadIdx.x % warp_size; } //TODO: move to macros and reuse
+
 __inline__ __device__
 int warpAllReduceMax(int val) {
 
@@ -200,6 +202,65 @@ inline int ALT_BITLEN( int v)
     shift = (v > 0x3   ) << 1; v >>= shift; r |= shift;
     r |= (v >> 1);
     return r+1;
+}
+
+__device__ inline long shfl_up(long value, int i, int width=32)
+{
+    int lo, hi;
+    asm volatile("mov.b64 {%0,%1}, %2;":"=r"(lo),"=r"(hi):"l"(value));
+
+    lo =  __shfl_up(lo, i, width); // add zeroLaneValue
+    hi =  __shfl_up(hi, i, width); // add zeroLaneValue
+
+    asm volatile("mov.b64 %0,{%1,%2};":"=l"(value):"r"(lo),"r"(hi));
+
+    return value;
+}
+__device__ inline int shfl_prefix_sum(int value, int width=32)  // TODO: move to macros and reuse
+{
+    int lane_id = get_lane_id();
+
+    // Now accumulate in log2(32) steps
+#pragma unroll
+    for(int i=1; i<=width; i*=2) {
+        int n = __shfl_up(value, i);
+        if(lane_id >= i) value += n;
+    }
+
+    return value;
+}
+
+
+__device__ inline long shfl_prefix_sum(long value, int width=32)  // TODO: move to macros and reuse
+{
+    int lane_id = get_lane_id();
+
+    // Now accumulate in log2(32) steps
+#pragma unroll
+    for(int i=1; i<=width; i*=2) {
+        long n = shfl_up(value, i);
+        if(lane_id >= i) value += n;
+    }
+
+    return value;
+}
+
+__device__ inline int shfl_get_value(int value, int laneId, int width=32)
+{
+    return __shfl(value, laneId, width); // add zeroLaneValue
+}
+
+__device__ inline long shfl_get_value(long value, int laneId, int width=32)
+{
+    int lo, hi;
+    asm volatile("mov.b64 {%0,%1}, %2;":"=r"(lo),"=r"(hi):"l"(value));
+
+    lo =  __shfl(lo, laneId, width); // add zeroLaneValue
+    hi =  __shfl(hi, laneId, width); // add zeroLaneValue
+
+    asm volatile("mov.b64 %0,{%1,%2};":"=l"(value):"r"(lo),"r"(hi));
+
+    return value;
 }
 
 #define SGN(a) (int)((unsigned int)((int)a) >> (sizeof(int) * CHAR_BIT - 1))

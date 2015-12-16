@@ -152,7 +152,7 @@ protected:
 };
 
 #define RUN_TEST(NAME, CNAME, PARAM)\
-TEST_CASE( NAME " test set", "[" NAME "][ALL]") {\
+TEST_CASE( NAME " test set", "[" NAME "][SMALL]") {\
     SECTION("int: SMALL ALIGNED data set")  { CNAME <int, PARAM> test  ; CHECK(test.run(SMALL_ALIGNED_DATA_SET) == 0 );}\
     SECTION("int: SMALL data set")          { CNAME <int, PARAM> test  ; CHECK(test.run(SMALL_DATA_SET) == 0 );}\
     SECTION("int: MEDIUM data set")         { CNAME <int, PARAM> test  ; CHECK(test.run(MEDIUM_DATA_SET) == 0 );}\
