@@ -1,5 +1,6 @@
 
 # Naive CUDA search
+NVCC_DEBIAN=/usr/bin/nvcc
 NVCC75=/usr/local/cuda-7.5/bin/nvcc
 NVCC70=/usr/local/cuda-7.0/bin/nvcc
 NVCC65=/usr/local/cuda-6.5/bin/nvcc
@@ -15,7 +16,7 @@ NVCCFLAGS_5    +=  -gencode=arch=compute_50,code=compute_50
 
 NVCCFLAGS    = -gencode arch=compute_35,code=sm_35
 NVCCFLAGS    += -gencode arch=compute_35,code=sm_35
-NVCCFLAGS    += --compiler-options=-Wall,-Wno-unused-function -I$(CURDIR) -O3
+NVCCFLAGS    += --compiler-options=-Wall,-Wno-unused-function -I$(CURDIR) -O3 -std=c++11 -ccbin=/usr/bin/g++-4.9
 
 ifneq ("$(wildcard $(NVCC75))","")
 	NVCC = $(NVCC75)
@@ -25,6 +26,8 @@ else ifneq ("$(wildcard $(NVCC70))","")
 	NVCCFLAGS += $(NVCCFLAGS_5)
 else ifneq ("$(wildcard $(NVCC65))","")
 	NVCC = $(NVCC65)
+else ifneq ("$(wildcard $(NVCC_DEBIAN))","")
+	NVCC = $(NVCC_DEBIAN)
 else
 	NVCC = $(NVCC60)
 endif
