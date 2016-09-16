@@ -63,42 +63,36 @@ __device__  void aafl_compress_base_gpu (unsigned long *compressed_data_register
     // Compute bit length for compressed block of data
     for (i = 0; i < CWORD_SIZE(T) && pos_data < length; ++i) 
     {
-        /* tmp_bit_length = BITLEN(data[pos_data]); */
-        /* if (tmp_bit_length == 1) { */
-        /*     printf("%d\n", data[pos_data]); */
-            
-        /* } */
-        /* bit_length = max(bit_length, tmp_bit_length); */
         max_val = data[pos_data] > max_val ?  data[pos_data] : max_val;
         pos_data += CWARP_SIZE;
     }
 
-    /*printf("%d %u %u \n", threadIdx.x, bit_length, tmp_bit_length );*/
-    // At least one thread in warp got some values
     i = warpAllReduceMax(i); 
     // Warp vote for maximum bit length
     bit_length = max_val > 0 ? BITLEN(max_val) + 1 : 0;
     bit_length = warpAllReduceMax(bit_length);
 
-    // Skip if i == 0 TODO: co jesli wszystkie wartosci sa rzeczywiscie równe 0
+    // Skip if i == 0, i.e. if all values in block are set to 0
     if (i > 0) { 
-
-        // Select leader
-        int mask = __ballot(1);  // mask of active lanes
-        int leader = __ffs(mask) - 1;  // -1 for 0-based indexing
 
         // leader thread registers memory in global
         unsigned long comp_data_id = 0;
 
-        if (leader == threadIdx.x % 32) { 
+        if (threadIdx.x % CWARP_SIZE == 0) { 
             const unsigned long data_block = (blockIdx.x * blockDim.x) / CWARP_SIZE + threadIdx.x / CWARP_SIZE;
-            comp_data_id = (unsigned long long int) atomicAdd( (unsigned long long int *) compressed_data_register, (unsigned long long int)(bit_length * CWARP_SIZE));
-            /* printf("%ld %d %ld\n", comp_data_id, threadIdx.x, length); */
-            /* if (data_block >132097 ) printf("%d %ld %ld\n", threadIdx.x, data_block, length); // TODO: Fix */
-            /* else { */
+            unsigned long long int space = bit_length * CWARP_SIZE;
+
+            if(data_id + CWARP_SIZE * CWORD_SIZE(T) > length && data_id < length) {
+                space = (( (length - data_id + CWORD_SIZE(T) - 1) / CWORD_SIZE(T)) * bit_length + CWARP_SIZE - 1) / CWARP_SIZE;
+                space *= CWARP_SIZE;
+            }
+            
+            if (space  > CWARP_SIZE * bit_length) 
+                printf("%d %d %ld \n", bit_length, CWARP_SIZE * bit_length, space);
+
+            comp_data_id = (unsigned long long int) atomicAdd( (unsigned long long int *) compressed_data_register, space);
             warp_bit_lenght[data_block] = bit_length;
             warp_position_id[data_block] = comp_data_id;
-            /* } */
         }
 
         if (bit_length > 0) {
@@ -106,7 +100,6 @@ __device__  void aafl_compress_base_gpu (unsigned long *compressed_data_register
             // Propagate in warp position of compressed block
             comp_data_id = warpAllReduceMax(comp_data_id);
             comp_data_id += warp_lane;
-            /*printf("%d %u %ld \n", threadIdx.x, bit_length, comp_data_id );*/
 
             // Compress using AFL algorithm
             afl_compress_base_gpu <T, CWARP_SIZE> (bit_length, data_id, comp_data_id, data, compressed_data, length);

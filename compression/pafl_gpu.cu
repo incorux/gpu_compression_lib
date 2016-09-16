@@ -6,16 +6,11 @@
 #include <math.h>
 #include <stdio.h>
 
-#define BIT_SET(a,b) ((a) |= (1UL<<(b)))
-#define BIT_CLEAR(a,b) ((a) &= ~(1UL<<(b)))
-#define BIT_FLIP(a,b) ((a) ^= (1UL<<(b)))
-#define BIT_CHECK(a,b) ((a) & (1UL<<(b)))
-
-
 template <typename T, char CWARP_SIZE>
 __device__  void pafl_compress_base_gpu3 (
         const unsigned int bit_length, 
-        unsigned long data_id, unsigned long comp_data_id,
+        unsigned long data_id, 
+        unsigned long comp_data_id,
         T *data, T *compressed_data,
         unsigned long length,
 
@@ -31,12 +26,17 @@ __device__  void pafl_compress_base_gpu3 (
 
     T exception_buffer[8];
     unsigned long position_mask = 0;
+    T mask;
+    if (sizeof(T) == sizeof(long)) // TODO
+        mask = ~LNBITSTOMASK(bit_length); 
+    else
+        mask = ~NBITSTOMASK(bit_length); 
 
     for (unsigned int i = 0; i < CWORD_SIZE(T) && pos_data < length; ++i) 
     {
         v1 = data[pos_data];
 
-        if(BITLEN(v1) >= bit_length){
+        if(v1 & mask){
             exception_buffer[exception_counter] = v1;
             exception_counter ++;
             BIT_SET(position_mask, i);
@@ -90,12 +90,13 @@ __device__  void pafl_compress_base_gpu3 (
 template < typename T, char CWARP_SIZE >
 __global__ void pafl_compress_gpu3 (
         const unsigned int bit_length, 
-        T *data, T *compressed_data, 
+        T *data, 
+        T *compressed_data, 
         unsigned long length,
         
-        T *global_queue_patch_values,
-        unsigned long *global_queue_patch_index,
-        unsigned long *global_queue_patch_count
+        T *global_data_patch_values,
+        unsigned long *global_data_patch_index,
+        unsigned long *global_data_patch_count
         )
 {
     const unsigned int warp_lane = threadIdx.x % CWARP_SIZE; 
@@ -106,14 +107,13 @@ __global__ void pafl_compress_gpu3 (
     pafl_compress_base_gpu3 <T, CWARP_SIZE> (
             bit_length, data_id, cdata_id, data, compressed_data,
             length,
-            global_queue_patch_values,
-            global_queue_patch_index, 
-            global_queue_patch_count);
+            global_data_patch_values,
+            global_data_patch_index, 
+            global_data_patch_count);
 }
 
 template <typename T, char CWARP_SIZE> 
 __global__ void patch_apply_gpu3 (
-        pafl_header comp_h,
         T *decompressed_data,
         unsigned long length,
         
@@ -136,14 +136,10 @@ __global__ void patch_apply_gpu3 (
 
 template <typename T, char CWARP_SIZE> 
 __host__ void run_pafl_compress_gpu_alternate(
-        pafl_header comp_h, 
+        unsigned int bit_length,
         T *data, 
         T *compressed_data, 
         unsigned long length,
-        
-        T *global_queue_patch_values,
-        unsigned long *global_queue_patch_index,
-        unsigned long *global_queue_patch_count,
 
         T *global_data_patch_values,
         unsigned long *global_data_patch_index,
@@ -154,7 +150,7 @@ __host__ void run_pafl_compress_gpu_alternate(
     const unsigned long block_number = (length + block_size * CWORD_SIZE(T) - 1) / (block_size * CWORD_SIZE(T));
 
     pafl_compress_gpu3 <T, CWARP_SIZE> <<<block_number, block_size>>> (
-            comp_h.bit_length, 
+            bit_length, 
             data, 
             compressed_data, 
             length,
@@ -171,7 +167,7 @@ __host__ void run_pafl_compress_gpu_alternate(
 
 template <typename T, char CWARP_SIZE> 
 __host__ void run_pafl_decompress_gpu(
-        pafl_header comp_h, 
+        unsigned int bit_length,
         T *compressed_data, 
         T *data, 
         unsigned long length,
@@ -183,12 +179,17 @@ __host__ void run_pafl_decompress_gpu(
 {
     int block_size = CWARP_SIZE * 8; // better occupancy
     unsigned long block_number = (length + block_size * CWARP_SIZE - 1) / (block_size * CWARP_SIZE);
-    afl_decompress_gpu <T, CWARP_SIZE> <<<block_number, block_size>>> (comp_h.bit_length, compressed_data, data, length);
+
+    afl_decompress_gpu <T, CWARP_SIZE> <<<block_number, block_size>>> (
+            bit_length, 
+            compressed_data, 
+            data, 
+            length
+            );
 
     cudaErrorCheck();
     
     patch_apply_gpu3 <T, CWARP_SIZE> <<<block_number * CWARP_SIZE, block_size>>> (
-            comp_h, 
             data, 
             length,
 
@@ -199,8 +200,8 @@ __host__ void run_pafl_decompress_gpu(
 }
 
 #define GFL_SPEC(X, A) \
-template __host__ void run_pafl_compress_gpu_alternate <X,A> ( pafl_header , X *, X *, unsigned long , X *, unsigned long *, unsigned long *, X *, unsigned long *, unsigned long *);\
-template __host__ void run_pafl_decompress_gpu <X,A> ( pafl_header , X *, X *, unsigned long , X *, unsigned long *, unsigned long *);
+template __host__ void run_pafl_compress_gpu_alternate <X,A> ( unsigned int, X *, X *, unsigned long, X *, unsigned long *, unsigned long *);\
+template __host__ void run_pafl_decompress_gpu <X,A> (unsigned int, X *, X *, unsigned long , X *, unsigned long *, unsigned long *);
 
 #define AFL_SPEC(X) GFL_SPEC(X, 32)
 FOR_EACH(AFL_SPEC, int, long)

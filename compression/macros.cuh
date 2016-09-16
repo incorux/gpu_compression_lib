@@ -12,6 +12,11 @@
 #define _unused(x) x __attribute__((unused))
 #define convert_struct(n, s)  struct sgn {signed int x:n;} __attribute__((unused)) s
 
+#define BIT_SET(a,b) ((a) |= (1UL<<(b)))
+#define BIT_CLEAR(a,b) ((a) &= ~(1UL<<(b)))
+#define BIT_FLIP(a,b) ((a) ^= (1UL<<(b)))
+#define BIT_CHECK(a,b) ((a) & (1UL<<(b)))
+
 __device__ inline int get_lane_id(int warp_size=32) { return threadIdx.x % warp_size; } //TODO: move to macros and reuse
 
 __inline__ __device__
