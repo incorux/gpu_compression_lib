@@ -97,10 +97,12 @@ void __inner_big_random_block_with_outliers( unsigned long size, int outlier_cou
 {
     init_random_generator();
     big_random_block(size, limit_bits, data);
+    unsigned long exception = ULONG_MAX; // Sets all bits
+    exception &= outlier_mask;
 
     for (int i = 0; i < outlier_count; ++i) {
         unsigned long p = xorshf96() % size;
-        data[ p ] = xorshf96() & outlier_mask;
+        data[ p ] = exception;
     }
 }
 

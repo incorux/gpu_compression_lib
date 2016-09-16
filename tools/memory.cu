@@ -33,7 +33,6 @@ void __mmCudaFreeInternal(allocation_info *d)
     }
 }
 
-
 void mmCudaFreeAll(mmManager &manager)
 {
    mmManager::iterator i;

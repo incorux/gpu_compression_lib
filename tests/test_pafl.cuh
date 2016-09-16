@@ -27,8 +27,8 @@ class test_pafl: public test_base<T, CWARP_SIZE>
             int outlier_bits=1;
             big_random_block_with_outliers(this->max_size, this->outlier_count, bit_length, outlier_bits, this->host_data);
 
-            this->comp_h.bit_length = bit_length;
-            this->comp_h.patch_bit_length = outlier_bits;
+            /* this->comp_h.bit_length = bit_length; */
+            /* this->comp_h.patch_bit_length = outlier_bits; */
         }
 
         // Clean up before compression
@@ -40,14 +40,10 @@ class test_pafl: public test_base<T, CWARP_SIZE>
         virtual void compressData(int bit_length) {
 
             run_pafl_compress_gpu_alternate <T,CWARP_SIZE> (
-                this->comp_h,
+                bit_length,
                 this->dev_data,
                 this->dev_out,
                 this->max_size,
-
-                this->dev_data_patch_values,
-                this->dev_data_patch_index,
-                this->dev_data_patch_count,
 
                 this->dev_data_patch_values,
                 this->dev_data_patch_index,
@@ -59,7 +55,7 @@ class test_pafl: public test_base<T, CWARP_SIZE>
 
         virtual void decompressData(int bit_length) {
             run_pafl_decompress_gpu < T, CWARP_SIZE> (
-                this->comp_h, 
+                bit_length, 
                 this->dev_out, 
                 this->dev_data, 
                 this->max_size,
@@ -78,7 +74,6 @@ class test_pafl: public test_base<T, CWARP_SIZE>
         unsigned long outlier_count;
         unsigned long outlier_data_size;
         float outlier_percent;
-        pafl_header comp_h;
 };
 
 #endif /* end of include guard: TEST_PAFL_CUH_YCIJ79CD */
