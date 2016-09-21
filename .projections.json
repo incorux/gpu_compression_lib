@@ -8,7 +8,7 @@
         "type": "h"
     },
     "*": {
-        "rmake": "fab -H teslabot all:all",
+        "rmake": "fab -H cadmed all:all",
         "compiler": "gcc"
     }
 }

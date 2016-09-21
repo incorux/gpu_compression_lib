@@ -7,6 +7,7 @@ env.use_ssh_config = True
 #env.hosts = ["teslabot", "gpunode2"]
 hosts_config = {
         "teslabot":"/home/eror/",
+        "gpunode1":"/home/przymusp/",
         "gpunode2":"/home/samba/przymusp/",
         "gpunode3":"/home/samba/przymusp/",
         "cadmed":"/home/samba/przymusp/",
