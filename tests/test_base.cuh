@@ -70,7 +70,7 @@ public:
         }
     }
 
-    virtual int run(unsigned long max_size, bool print = false)
+    virtual int run(unsigned long max_size, bool print = false, unsigned int fixed_bit_lenght=0)
     {
         TIMEIT_SETUP();
         pre_setup(max_size);
@@ -79,6 +79,11 @@ public:
         
         unsigned int min_bit_lenght = (unsigned int)getenv_extract_int("GPU_MIN_BIT_LENGTH", 1, cword, 1);
         unsigned int max_bit_lenght = (unsigned int)getenv_extract_int("GPU_MAX_BIT_LENGTH", 1, cword, cword);
+
+        if(fixed_bit_lenght > 0) { // overwrite previous settings, dirty fix for real data
+            min_bit_lenght = fixed_bit_lenght;
+            max_bit_lenght = fixed_bit_lenght + 1;
+        }
 
         for (unsigned int _bit_lenght = min_bit_lenght; _bit_lenght < max_bit_lenght; ++_bit_lenght) {
             this->bit_length = _bit_lenght;

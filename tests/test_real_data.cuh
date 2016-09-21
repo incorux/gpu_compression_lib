@@ -13,65 +13,70 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 
-template <typename T>
-class read_real_data 
+//SOME DIRTY HACK
+
+class BlankSomeMethods
 {
     public:
-        read_real_data (const char *fname): fname(fname){}
-        virtual void initializeData(int bit_length) {
-
+        virtual void pre_setup_file_read(const char * fname){
             struct stat st;
-            stat(this->fname, &st);
-            this->fsize = st.st_size;
-            /* printf("File size %d Number of ints %d\n", fsize, fsize / 4); */
+            stat(fname, &st);
+            fsize = st.st_size;
+        }
+        virtual void memcpy_binary_file_to_memory(const char * fname, void *dest){
 
-            if ((fd = open(this->fname, O_RDONLY))== -1) {
+            if ((fd = open(fname, O_RDONLY))== -1) {
                 perror("Error opening file for reading");
                 exit(EXIT_FAILURE);
             }
 
-            map = (T *) mmap(0, fsize, PROT_READ, MAP_SHARED, fd, 0);
+            map = (void *) mmap(0, fsize, PROT_READ, MAP_SHARED, fd, 0);
+            
             if (map == MAP_FAILED) {
                 close(fd);
                 perror("Error mmapping the file");
                 exit(EXIT_FAILURE);
             }
-        }
-        virtual ~read_real_data(){
-            if (munmap((void *) this->map, this->filesize) == -1) {
+           
+            cudaMemcpy(dest, map, fsize, cudaMemcpyHostToHost );
+
+            if (munmap((void *) this->map, this->fsize) == -1) {
                 perror("Error un-mmapping the file");
             }
             close(this->fd);
         }
-        virtual unsigned long get_size() {
-            return fsize;
-        }
-    private:
-        const char *fname;
-        T *map;
-        long filesize;
-        int fd;
-        unsigned long fsize;
-};
 
+        virtual void allocateMemory() {printf("DUPA\n");}
+        virtual void initializeData(int bit_length) {printf("DUPA\n");}
+    protected:
+        void *map;
+        int fd;
+        unsigned int fsize;
+        /* data */
+};
 
 #define REAL_DATA_TEST_CLASS(ORG_CLASS) \
-template <typename T, int CWARP_SIZE> \
-class ORG_CLASS ## _real_data: public ORG_CLASS <T, CWARP_SIZE>, read_real_data<T> \
+    template <typename T, int CWARP_SIZE> \
+class ORG_CLASS ## _real_data: public ORG_CLASS <T, CWARP_SIZE>, protected BlankSomeMethods \
 {\
     public:\
-        virtual int run(unsigned long max_size, bool print = false)\
-        {\
-            return ORG_CLASS<T, CWARP_SIZE>::run(this->get_size(), print);\
-        }\
+    virtual int run_on_file(const char *fname, unsigned int bit_length, bool print = false)\
+    {\
+        pre_setup_file_read(fname);\
+        ORG_CLASS<T, CWARP_SIZE>::pre_setup(this->fsize);\
+        ORG_CLASS<T, CWARP_SIZE>::setup(this->fsize);\
+        ORG_CLASS<T, CWARP_SIZE>::allocateMemory();\
+        BlankSomeMethods::memcpy_binary_file_to_memory(fname, (void *)this->host_data);\
+        return ORG_CLASS<T, CWARP_SIZE>::run(this->fsize, print, bit_length);\
+    }\
 };
-
 FOR_EACH(REAL_DATA_TEST_CLASS, test_afl, test_afl_random_access)
 FOR_EACH(REAL_DATA_TEST_CLASS, test_afl_cpu, test_afl_random_access_cpu)
 FOR_EACH(REAL_DATA_TEST_CLASS, test_pafl, test_delta, test_aafl)
