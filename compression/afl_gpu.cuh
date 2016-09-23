@@ -32,4 +32,6 @@ template <typename T, char CWARP_SIZE> __device__ __host__ void afl_compress_bas
 
 template <typename T, char CWARP_SIZE> __device__ __host__ void afl_decompress_zeros_gpu (const unsigned int bit_length, unsigned long comp_data_id, unsigned long data_id, T *compressed_data, T *data, unsigned long length);
 
+template <typename T, char CWARP_SIZE> __device__ __host__ void afl_decompress_constant_value_gpu (const unsigned int bit_length, unsigned long comp_data_id, unsigned long data_id, T *compressed_data, T value, T *data, unsigned long length);
+
 #endif

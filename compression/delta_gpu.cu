@@ -4,9 +4,7 @@
 template <typename T, char CWARP_SIZE>
 __device__  void delta_afl_compress_base_gpu (const unsigned int bit_length, unsigned long data_id, unsigned long comp_data_id, T *data, T *compressed_data, T* compressed_data_block_start, unsigned long length)
 {
-
-    if (data_id >= length) 
-        return;
+    if (data_id >= length) return;
 
     T v1, value = 0;
     unsigned int v1_pos=0, v1_len;

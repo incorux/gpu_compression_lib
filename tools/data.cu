@@ -5,6 +5,10 @@
 
 static unsigned long __xorshf96_x=123456789, __xorshf96_y=362436069, __xorshf96_z=521288629;
 
+int compare_binary_file(const void *a, const void *b) {
+  return -(*(int *)a - *(int *)b);
+}
+
 void init_random_generator(){
     srand (time(NULL));
     __xorshf96_x=(unsigned long) rand(); 
@@ -128,7 +132,7 @@ void big_random_block_with_outliers( unsigned long size, int outlier_count, int 
 }
 
 template <typename T>
-int compare_arrays(T *in1, T *in2, unsigned long size)
+unsigned long compare_arrays(T *in1, T *in2, unsigned long size)
 {
     unsigned long count_errors = 0;
     unsigned long precheck = 0;
@@ -151,7 +155,7 @@ int compare_arrays(T *in1, T *in2, unsigned long size)
 #define DATA_FUNC_SPEC(X) \
 template void big_random_block <X> ( unsigned long size, int limit_bits, X *data);\
 template void big_random_block_with_outliers <X> ( unsigned long size, int outlier_count, int limit_bits, int outlier_bits,  X *data);\
-template int compare_arrays <X> (X *in1, X *in2, unsigned long size);\
+template unsigned long compare_arrays <X> (X *in1, X *in2, unsigned long size);\
 template void big_random_block_with_decreasing_values <X> ( unsigned long size, int limit_bits, X *data);
 
 FOR_EACH(DATA_FUNC_SPEC, int, long, unsigned int, unsigned long)

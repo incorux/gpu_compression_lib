@@ -1,8 +1,8 @@
 #include "test_real_data.cuh"
 
-TEST_CASE("REAL AFL benchmark test", "[.][AFL_CPU][REAL]" ) {
-    SECTION("REAL DATA BENCHMARK data set") {
-        test_afl_cpu_real_data <int, 32> test;
-        CHECK(test.run_on_file("real_data_benchmarks/LINENUMBER.bin", 3) == 0);
-    }
-}
+RUN_FILE_BENCHMARK_TEST("AFL_CPU", test_afl_cpu, int, 32, "real_data_benchmarks/LINENUMBER.bin", 3, false)
+RUN_FILE_BENCHMARK_TEST("AFL", test_afl, int, 32, "real_data_benchmarks/LINENUMBER.bin", 3, false)
+RUN_FILE_BENCHMARK_TEST("FL", test_afl, int, 1, "real_data_benchmarks/LINENUMBER.bin", 3, false)
+RUN_FILE_BENCHMARK_TEST("AAFL", test_aafl, int, 32, "real_data_benchmarks/LINENUMBER.bin", 3, false)
+RUN_FILE_BENCHMARK_TEST("DELTA_AFL", test_delta, int, 32, "real_data_benchmarks/COMMITDATE_SORTED.bin", 30, true)
+RUN_FILE_BENCHMARK_TEST("DELTA_AAFL", test_delta_aafl, int, 32, "real_data_benchmarks/COMMITDATE_SORTED.bin", 30, true)
