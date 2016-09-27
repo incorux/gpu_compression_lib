@@ -18,7 +18,6 @@ NVCCFLAGS_5    += -gencode=arch=compute_50,code=compute_50
 NVCCFLAGS    = -gencode arch=compute_35,code=sm_35
 NVCCFLAGS    += -gencode arch=compute_35,code=sm_35
 NVCCFLAGS    += --compiler-options=-Wall,-Wno-unused-function -I$(CURDIR)
-NVCCFLAGS 	 +=  -std=c++11 -D_FORCE_INLINES  -O3
 
 ifneq ("$(wildcard $(NVCC75))","")
 	NVCC = $(NVCC75)
@@ -41,3 +40,5 @@ ifneq ("$(wildcard /usr/bin/g++-4.9)","")
 else ifneq ("$(wildcard /home/samba/przymusp/src/gcc-4.9.4/gcc/bin/g++)","")
 	NVCCFLAGS    += -ccbin=/home/samba/przymusp/src/gcc-4.9.4/gcc/bin/g++
 endif
+
+NVCCFLAGS 	 +=  -std=c++11 -D_FORCE_INLINES  -O3
