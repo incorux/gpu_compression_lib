@@ -3,6 +3,7 @@
 
 #include "test_base.cuh"
 #include "compression/aafl_gpu.cuh"
+#include "tools/tools.cuh"
 
 template <typename T, int CWARP_SIZE> 
 class test_aafl: public virtual test_base<T, CWARP_SIZE> 
@@ -16,10 +17,6 @@ class test_aafl: public virtual test_base<T, CWARP_SIZE>
         virtual void setup(unsigned long max_size) {
             test_base<T, CWARP_SIZE>::setup(max_size);
             iner_setup(max_size);
-        }
-
-        virtual void initializeData(int bit_length) {
-            big_random_block(this->max_size, bit_length, this->host_data);
         }
 
         // Clean up before compression
@@ -51,10 +48,9 @@ class test_aafl: public virtual test_base<T, CWARP_SIZE>
         unsigned long *dev_data_compressed_data_register;
 
         virtual void iner_allocateMemory(){
+            mmCudaMalloc(this->manager, (void **) &this->dev_data_position_id, compression_blocks_count * sizeof(unsigned long));
             mmCudaMalloc(this->manager, (void **) &this->dev_data_compressed_data_register, sizeof(long));
             mmCudaMalloc(this->manager, (void **) &this->dev_data_bit_lenght, compression_blocks_count * sizeof(unsigned char));
-            mmCudaMalloc(this->manager, (void **) &this->dev_data_position_id, compression_blocks_count * sizeof(unsigned long));
-
         }
 
         virtual void iner_cleanBeforeCompress(){

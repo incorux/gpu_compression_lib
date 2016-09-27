@@ -46,7 +46,6 @@ class test_base
             cudaMemset(dev_out, 0, compressed_data_size); // Clean up before compression
         }
 
-
         virtual void errorCheck() { 
             cudaErrorCheck();
         }
@@ -73,9 +72,6 @@ class test_base
             this->compressed_data_size = (max_size < data_block_size  ? data_block_size : max_size);
             this->compressed_data_size = ((this->compressed_data_size * this->bit_length + (32*sizeof(T)*8)-1) / (32*sizeof(T)*8)) * 32 * sizeof(T) + (sizeof(T)*8) * sizeof(T);
 
-            if (if_debug()){
-                print_compressed_data_size();
-            }
         }
 
         virtual int run(unsigned long max_size, bool print = false, unsigned int fixed_bit_lenght=0)
