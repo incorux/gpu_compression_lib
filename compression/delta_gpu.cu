@@ -122,6 +122,69 @@ __device__ void delta_afl_decompress_base_gpu (
     }
 }
 
+template <typename T, char CWARP_SIZE>
+__device__ void delta_pafl_decompress_base_gpu (
+        const unsigned int bit_length, 
+        unsigned long comp_data_id,
+        unsigned long data_id, 
+        T *compressed_data, 
+        T* compressed_data_block_start, 
+        T *data, 
+        unsigned long length
+        )
+{
+    unsigned long pos = comp_data_id, pos_decomp = data_id;
+    unsigned int v1_pos = 0, v1_len;
+    T v1, ret;
+
+    const unsigned long lane = get_lane_id();
+
+    if (pos_decomp >= length ) // Decompress not more elements then length
+        return;
+
+    v1 = compressed_data[pos];
+
+    T zeroLaneValue = 0, v2 = 0;
+
+    const unsigned long data_block = (blockIdx.x * blockDim.x) / CWARP_SIZE  + threadIdx.x / CWARP_SIZE;
+
+    if (lane == 0) {
+       zeroLaneValue = compressed_data_block_start[data_block];
+    }
+
+    for (unsigned int i = 0; i < CWORD_SIZE(T) && pos_decomp < length; ++i)
+    {
+        if (v1_pos >= CWORD_SIZE(T) - bit_length){ 
+            v1_len = CWORD_SIZE(T) - v1_pos;
+            ret = GETNPBITS(v1, v1_len, v1_pos);
+
+            pos += CWARP_SIZE;  
+            v1 = compressed_data[pos];
+
+            v1_pos = bit_length - v1_len;
+            ret = ret | ((GETNBITS(v1, v1_pos))<< v1_len);
+        } else {
+            v1_len = bit_length;
+            ret = GETNPBITS(v1, v1_len, v1_pos);
+            v1_pos += v1_len;
+        }
+
+        if(data[pos_decomp] > 0)
+            ret = data[pos_decomp];
+
+        ret = shfl_prefix_sum(ret); // prefix sum deltas 
+        v2 = shfl_get_value(zeroLaneValue, 0);
+        ret = v2 - ret;
+
+        data[pos_decomp] = ret;
+        pos_decomp += CWARP_SIZE;
+
+        v2 = shfl_get_value(ret, 31);
+
+        if(lane == 0) 
+            zeroLaneValue = v2; 
+    }
+}
 template < typename T, char CWARP_SIZE >
 __global__ void delta_afl_compress_gpu (const unsigned int bit_length, T *data, T *compressed_data, T* compressed_data_block_start, unsigned long length)
 {
@@ -142,6 +205,17 @@ __global__ void delta_afl_decompress_gpu (const unsigned int bit_length, T *comp
     const unsigned long cdata_id = data_block * bit_length + warp_lane;
 
     delta_afl_decompress_base_gpu <T, CWARP_SIZE> (bit_length, cdata_id, data_id, compressed_data, compressed_data_block_start, decompress_data, length);
+}
+
+template < typename T, char CWARP_SIZE >
+__global__ void delta_pafl_decompress_gpu (const unsigned int bit_length, T *compressed_data, T* compressed_data_block_start, T * decompress_data, unsigned long length)
+{
+    const unsigned int warp_lane = get_lane_id();
+    const unsigned long data_block = blockIdx.x * blockDim.x + threadIdx.x - warp_lane;
+    const unsigned long data_id = data_block * CWORD_SIZE(T) + warp_lane;
+    const unsigned long cdata_id = data_block * bit_length + warp_lane;
+
+    delta_pafl_decompress_base_gpu <T, CWARP_SIZE> (bit_length, cdata_id, data_id, compressed_data, compressed_data_block_start, decompress_data, length);
 }
 
 template < typename T, char CWARP_SIZE >
@@ -166,7 +240,12 @@ template  __host__  void run_delta_afl_compress_gpu<X, A> (const unsigned int bi
 template  __global__  void delta_afl_decompress_gpu <X, A> (const unsigned int bit_length, X *compressed_data, X* compressed_data_block_start, X * decompress_data, unsigned long length);\
 template  __global__  void delta_afl_compress_gpu <X, A> (const unsigned int bit_length, X *data, X *compressed_data, X* compressed_data_block_start, unsigned long length);\
 template __device__  void delta_afl_decompress_base_gpu <X, A> ( const unsigned int bit_length, unsigned long comp_data_id, unsigned long data_id, X *compressed_data, X* compressed_data_block_start, X *data, unsigned long length);\
-template __device__   void delta_afl_compress_base_gpu <X, A> (const unsigned int bit_length, unsigned long data_id, unsigned long comp_data_id, X *data, X *compressed_data, X* compressed_data_block_start, unsigned long length);
+template __device__   void delta_afl_compress_base_gpu <X, A> (const unsigned int bit_length, unsigned long data_id, unsigned long comp_data_id, X *data, X *compressed_data, X* compressed_data_block_start, unsigned long length);\
+template  __device__ void delta_pafl_decompress_base_gpu <X, A>( const unsigned int bit_length, unsigned long comp_data_id, unsigned long data_id, X *compressed_data, X* compressed_data_block_start, X *data, unsigned long length);\
+template __global__ void delta_pafl_decompress_gpu <X, A> (const unsigned int bit_length, X *compressed_data, X* compressed_data_block_start, X * decompress_data, unsigned long length);
 
 #define AFL_SPEC(X) GFL_SPEC(X, 32)
 FOR_EACH(AFL_SPEC, int, long) //, unsigned int, unsigned long)
+
+#define FL_SPEC(X) GFL_SPEC(X, 1)
+FOR_EACH(FL_SPEC, int, long) //, unsigned int, unsigned long)

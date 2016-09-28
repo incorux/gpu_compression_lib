@@ -6,6 +6,7 @@
 // Tools
 template <typename T> void big_random_block ( unsigned long size, int limit_bits, T *data);
 template <typename T> void big_random_block_with_outliers ( unsigned long size, int outlier_count, int limit_bits, int outlier_bits,  T *data);
+template <typename T> void big_random_block_with_decreasing_values_and_outliers ( unsigned long size, int limit_bits, T *data, unsigned long outliers_count); 
 
 template <typename T> unsigned long compare_arrays ( T *in1, T *in2, unsigned long size);
 

@@ -20,4 +20,18 @@ template < typename T, char CWARP_SIZE > __global__ void delta_afl_compress_gpu 
 template <typename T, char CWARP_SIZE> __device__ void delta_afl_decompress_base_gpu ( const unsigned int bit_length, unsigned long comp_data_id, unsigned long data_id, T *compressed_data, T* compressed_data_block_start, T *data, unsigned long length);
 
 template <typename T, char CWARP_SIZE> __device__  void delta_afl_compress_base_gpu (const unsigned int bit_length, unsigned long data_id, unsigned long comp_data_id, T *data, T *compressed_data, T* compressed_data_block_start, unsigned long length);
+
+template <typename T, char CWARP_SIZE>
+__device__ void delta_pafl_decompress_base_gpu (
+        const unsigned int bit_length, 
+        unsigned long comp_data_id,
+        unsigned long data_id, 
+        T *compressed_data, 
+        T* compressed_data_block_start, 
+        T *data, 
+        unsigned long length
+        );
+
+template < typename T, char CWARP_SIZE >
+__global__ void delta_pafl_decompress_gpu (const unsigned int bit_length, T *compressed_data, T* compressed_data_block_start, T * decompress_data, unsigned long length);
 #endif /* end of include guard: DELTA_CUH_KKZZHX97 */

@@ -75,6 +75,32 @@ void __inner_big_random_block_with_decreasing_values( unsigned long size, X mask
         }
     }
 }
+
+template <typename T, typename X>
+void __inner_big_random_block_with_decreasing_values_and_outliers( unsigned long size, X mask, T *data, unsigned long outliers_count) 
+{
+    //TODO: fix
+    init_random_generator();
+    data[0] = std::numeric_limits<T>::max() - 1;
+    T v = 0;
+    unsigned long max_outliers = outliers_count;
+    int max_outliers_in_block = 8;
+    for (unsigned long i = 1; i < size; i++){
+        v = (xorshf96() & mask);
+        if(max_outliers > 0 && max_outliers_in_block > 0 && xorshf96() % 2) {
+            max_outliers_in_block --;
+            max_outliers --;
+            v <<= 1;
+        }
+        if(i % CWORD_SIZE(X) == 0) max_outliers_in_block = 8;
+        if( ((long)data[i-1] - (long)v) >= 0 ){ // ensure that data does not go below 0
+            data[i] = data[i-1] - v;
+        } else {
+            data[i] = 0;
+        }
+    }
+}
+
 template <typename T>
 void big_random_block_with_decreasing_values( unsigned long size, int limit_bits, T *data) 
 {
@@ -94,6 +120,27 @@ void big_random_block_with_decreasing_values( unsigned long size, int limit_bits
 {
     unsigned long mask = LNBITSTOMASK(limit_bits);
     __inner_big_random_block_with_decreasing_values(size, mask, data);
+}
+
+template <typename T>
+void big_random_block_with_decreasing_values_and_outliers( unsigned long size, int limit_bits, T *data, unsigned long outliers_count) 
+{
+    T mask = NBITSTOMASK(limit_bits);
+    __inner_big_random_block_with_decreasing_values_and_outliers(size, mask, data, outliers_count);
+}
+
+template <>
+void big_random_block_with_decreasing_values_and_outliers( unsigned long size, int limit_bits, unsigned long *data, unsigned long outliers_count) 
+{
+    unsigned long mask = LNBITSTOMASK(limit_bits);
+    __inner_big_random_block_with_decreasing_values_and_outliers(size, mask, data, outliers_count);
+}
+
+template <>
+void big_random_block_with_decreasing_values_and_outliers( unsigned long size, int limit_bits, long *data, unsigned long outliers_count) 
+{
+    unsigned long mask = LNBITSTOMASK(limit_bits);
+    __inner_big_random_block_with_decreasing_values_and_outliers(size, mask, data,  outliers_count);
 }
 
 template <typename T, typename X>
@@ -156,6 +203,7 @@ unsigned long compare_arrays(T *in1, T *in2, unsigned long size)
 template void big_random_block <X> ( unsigned long size, int limit_bits, X *data);\
 template void big_random_block_with_outliers <X> ( unsigned long size, int outlier_count, int limit_bits, int outlier_bits,  X *data);\
 template unsigned long compare_arrays <X> (X *in1, X *in2, unsigned long size);\
-template void big_random_block_with_decreasing_values <X> ( unsigned long size, int limit_bits, X *data);
+template void big_random_block_with_decreasing_values <X> ( unsigned long size, int limit_bits, X *data);\
+template void big_random_block_with_decreasing_values_and_outliers <X> ( unsigned long size, int limit_bits, X *data, unsigned long outliers_count); 
 
 FOR_EACH(DATA_FUNC_SPEC, int, long, unsigned int, unsigned long)
