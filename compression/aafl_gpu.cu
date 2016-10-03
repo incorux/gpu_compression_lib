@@ -69,7 +69,8 @@ __global__ void aafl_decompress_gpu (unsigned char *warp_bit_lenght, unsigned lo
     if(bit_length > 0)
         afl_decompress_base_gpu <T, CWARP_SIZE> (bit_length, comp_data_id, data_id, compressed_data, decompress_data, length);
     else
-        afl_decompress_zeros_gpu <T, CWARP_SIZE> (bit_length, comp_data_id, data_id, compressed_data, decompress_data, length);
+        /* afl_decompress_zeros_gpu <T, CWARP_SIZE> (bit_length, comp_data_id, data_id, compressed_data, decompress_data, length); */
+        afl_decompress_constant_value_gpu <T, CWARP_SIZE> (bit_length, comp_data_id, data_id, compressed_data, 0, decompress_data, length);
 }
 
     template < typename T, char CWARP_SIZE >
