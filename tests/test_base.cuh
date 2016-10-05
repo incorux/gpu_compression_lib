@@ -46,10 +46,6 @@ class test_base
             cudaMemset(dev_out, 0, compressed_data_size); // Clean up before compression
         }
 
-        virtual void errorCheck() { 
-            cudaErrorCheck();
-        }
-
         virtual void cleanBeforeDecompress() {
             cudaMemset(dev_data, 0, data_size); // Clean up before decompression
         }
@@ -103,13 +99,13 @@ class test_base
                 TIMEIT_END("M->G");
 
                 cleanBeforeCompress();
-                errorCheck();
+                cudaErrorCheck();
 
                 TIMEIT_START();
                 compressData(_bit_lenght);
                 TIMEIT_END("*comp");
 
-                errorCheck();
+                cudaErrorCheck();
 
                 cleanBeforeDecompress();
 
@@ -117,7 +113,7 @@ class test_base
                 decompressData(_bit_lenght);
                 TIMEIT_END("*decomp");
 
-                errorCheck();
+                cudaErrorCheck();
 
                 TIMEIT_START();
                 transferDataFromGPU();
@@ -198,13 +194,13 @@ class test_base
             TIMEIT_END("M->G");
 
             cleanBeforeCompress();
-            errorCheck();
+            cudaErrorCheck();
 
             TIMEIT_START();
             compressData(this->bit_length);
             TIMEIT_END("*comp");
 
-            errorCheck();
+            cudaErrorCheck();
 
             cleanBeforeDecompress();
 
@@ -212,7 +208,7 @@ class test_base
             decompressData(this->bit_length);
             TIMEIT_END("*decomp");
 
-            errorCheck();
+            cudaErrorCheck();
 
             TIMEIT_START();
             transferDataFromGPU();
