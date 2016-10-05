@@ -123,17 +123,17 @@ __device__  void aafl_compress_base_gpu (unsigned long *compressed_data_register
         const unsigned long data_block = (blockIdx.x * blockDim.x) / CWARP_SIZE + threadIdx.x / CWARP_SIZE;
         unsigned long long int space = bit_length * CWARP_SIZE;
 
-        /* if(data_id + CWARP_SIZE * CWORD_SIZE(T) > length && data_id < length) { */
-        /*     space = (( (length - data_id + CWORD_SIZE(T) - 1) / CWORD_SIZE(T)) * bit_length + CWARP_SIZE - 1) / CWARP_SIZE; */
-        /*     space *= CWARP_SIZE; */
-        /* } */
+        if(data_id + CWARP_SIZE * CWORD_SIZE(T) > length && data_id < length) { // We process data in blocks of N elements, this is needed if data size is not a multiply of N
+            space = (( (length - data_id + CWORD_SIZE(T) - 1) / CWORD_SIZE(T)) * bit_length + CWARP_SIZE - 1) / CWARP_SIZE;
+            space *= CWARP_SIZE;
+        }
 
         comp_data_id = (unsigned long long int) atomicAdd( (unsigned long long int *) compressed_data_register, space);
         warp_bit_lenght[data_block] = bit_length;
         warp_position_id[data_block] = comp_data_id;
     }
 
-    if (bit_length > 0) { // skip if bit_length is 0 for all TS
+    if (bit_length > 0) { // skip if bit_length is 0 for whole block (i.e. all values are equal 0)
         // Propagate in warp position of compressed block
         comp_data_id = warpAllReduceMax(comp_data_id);
         comp_data_id += warp_lane;
@@ -193,10 +193,10 @@ __device__  void delta_aafl_compress_base_gpu (unsigned long *compressed_data_re
         const unsigned long data_block = (blockIdx.x * blockDim.x) / CWARP_SIZE + threadIdx.x / CWARP_SIZE;
         unsigned long long int space = bit_length * CWARP_SIZE;
 
-        /* if(data_id + CWARP_SIZE * CWORD_SIZE(T) > length && data_id < length) { */
-        /*     space = (( (length - data_id + CWORD_SIZE(T) - 1) / CWORD_SIZE(T)) * bit_length + CWARP_SIZE - 1) / CWARP_SIZE; */
-        /*     space *= CWARP_SIZE; */
-        /* } */
+        if(data_id + CWARP_SIZE * CWORD_SIZE(T) > length && data_id < length) {
+            space = (( (length - data_id + CWORD_SIZE(T) - 1) / CWORD_SIZE(T)) * bit_length + CWARP_SIZE - 1) / CWARP_SIZE;
+            space *= CWARP_SIZE;
+        }
 
         comp_data_id = (unsigned long long int) atomicAdd( (unsigned long long int *) compressed_data_register, space);
         warp_bit_lenght[data_block] = bit_length;
