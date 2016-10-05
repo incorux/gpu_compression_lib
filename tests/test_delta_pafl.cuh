@@ -1,13 +1,12 @@
-#ifndef TEST_DELTA_AFL_H
-#define TEST_DELTA_AFL_H
+#ifndef TEST_DELTA_PAFL_H
+#define TEST_DELTA_PAFL_H
 #include "test_pafl.cuh"
 #include "test_delta.cuh"
-#include "compression/aafl_gpu.cuh"
+#include "compression/pafl_gpu.cuh"
 
-template <typename T, int CWARP_SIZE> 
-class test_delta_pafl: public test_pafl <T, CWARP_SIZE>, public test_delta <T, CWARP_SIZE>
+template <typename T, char CWARP_SIZE> 
+class test_delta_pafl: public virtual test_pafl <T, CWARP_SIZE>, public virtual test_delta <T, CWARP_SIZE>
 {
-
     virtual void allocateMemory() {
         test_base<T, CWARP_SIZE>::allocateMemory();
         test_pafl<T, CWARP_SIZE>::iner_allocateMemory();
@@ -65,12 +64,13 @@ class test_delta_pafl: public test_pafl <T, CWARP_SIZE>, public test_delta <T, C
 
     virtual void print_compressed_data_size(){
         //TODO: fix this
-        /* unsigned long tmp; */
-        /* cudaMemcpy(&tmp, this->dev_data_compressed_data_register, sizeof(unsigned long), cudaMemcpyDeviceToHost); */
-        /* printf("Comp ratio %f",  (float)this->max_size / (tmp + test_aafl<T, CWARP_SIZE>::compression_blocks_count * (sizeof(T) + sizeof(long) + sizeof(char)))); */
-        /* printf(" %d %lu %ld %ld\n" , this->bit_length, this->max_size, this->data_size, this->compressed_data_size); */
+        unsigned long patch_count;
+        unsigned long compression_blocks_count = test_delta<T, CWARP_SIZE>::compression_blocks_count;
+        cudaMemcpy(&patch_count, this->dev_data_patch_count, sizeof(unsigned long), cudaMemcpyDeviceToHost);
+        printf("Comp ratio %f",  (float)this->max_size / (patch_count * (sizeof(T) + sizeof(long)) +  compression_blocks_count * sizeof(T) + this->compressed_data_size));
+        printf(" %d %lu %ld %ld %ld\n" , this->bit_length, this->max_size, this->data_size, this->compressed_data_size, patch_count);
     }
 };
 
-#endif /* TEST_DELTA_AFL_H */
+#endif /* TEST_DELTA_PAFL_H */
 

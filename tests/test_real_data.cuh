@@ -10,12 +10,13 @@
 #include "test_macros.cuh"
 #include "test_pafl.cuh"
 #include "test_delta_aafl.cuh"
-#include "test_real_data.cuh"
+#include "test_delta_pafl.cuh"
 
 #define RUN_FILE_BENCHMARK_TEST(NAME, CNAME, TPARAM, IPARAM, FILENAME, COMP_PARAMS, SORT)\
 TEST_CASE( NAME " real data benchmark test", "[.][" NAME "][REAL]" ) {\
     SECTION("int: BENCHMARK data set")   {\
             CNAME <TPARAM, IPARAM> test;\
+            printf(NAME " ");\
             CHECK(test.run_on_file(FILENAME, COMP_PARAMS, true, SORT)==0);\
     }\
 }

@@ -4,7 +4,7 @@
 #include "test_delta.cuh"
 #include "compression/aafl_gpu.cuh"
 
-template <typename T, int CWARP_SIZE> 
+template <typename T, char CWARP_SIZE> 
 class test_delta_aafl: public test_aafl <T, CWARP_SIZE>, public test_delta <T, CWARP_SIZE>
 {
 
@@ -43,7 +43,7 @@ class test_delta_aafl: public test_aafl <T, CWARP_SIZE>, public test_delta <T, C
         //TODO: fix this
         unsigned long tmp;
         cudaMemcpy(&tmp, this->dev_data_compressed_data_register, sizeof(unsigned long), cudaMemcpyDeviceToHost);
-        printf("Comp ratio %f",  (float)this->max_size / (tmp + test_aafl<T, CWARP_SIZE>::compression_blocks_count * (sizeof(T) + sizeof(long) + sizeof(char))));
+        printf("Comp ratio %f",  (float)this->data_size / (tmp + test_aafl<T, CWARP_SIZE>::compression_blocks_count * (sizeof(T) + sizeof(long) + sizeof(char))));
         printf(" %d %lu %ld %ld\n" , this->bit_length, this->max_size, this->data_size, this->compressed_data_size);
     }
 };

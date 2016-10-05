@@ -5,7 +5,7 @@
 #include "compression/delta_gpu.cuh"
 
 
-template <typename T, int CWARP_SIZE> 
+template <typename T, char CWARP_SIZE> 
 class test_delta: public virtual test_base<T, CWARP_SIZE> 
 {
     public: 
