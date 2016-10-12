@@ -76,6 +76,28 @@ void __inner_big_random_block_with_decreasing_values( unsigned long size, X mask
     }
 }
 
+template <typename T>
+void big_random_block_with_decreasing_values( unsigned long size, int limit_bits, T *data) 
+{
+    T mask = NBITSTOMASK(limit_bits);
+    __inner_big_random_block_with_decreasing_values(size, mask, data);
+}
+
+template <>
+void big_random_block_with_decreasing_values( unsigned long size, int limit_bits, unsigned long *data) 
+{
+    unsigned long mask = LNBITSTOMASK(limit_bits);
+    __inner_big_random_block_with_decreasing_values(size, mask, data);
+}
+
+template <>
+void big_random_block_with_decreasing_values( unsigned long size, int limit_bits, long *data) 
+{
+    unsigned long mask = LNBITSTOMASK(limit_bits);
+    __inner_big_random_block_with_decreasing_values(size, mask, data);
+}
+
+
 template <typename T, typename X>
 void __inner_big_random_block_with_decreasing_values_and_outliers( unsigned long size, X mask, T *data, unsigned long outliers_count) 
 {
@@ -102,27 +124,6 @@ void __inner_big_random_block_with_decreasing_values_and_outliers( unsigned long
 }
 
 template <typename T>
-void big_random_block_with_decreasing_values( unsigned long size, int limit_bits, T *data) 
-{
-    T mask = NBITSTOMASK(limit_bits);
-    __inner_big_random_block_with_decreasing_values(size, mask, data);
-}
-
-template <>
-void big_random_block_with_decreasing_values( unsigned long size, int limit_bits, unsigned long *data) 
-{
-    unsigned long mask = LNBITSTOMASK(limit_bits);
-    __inner_big_random_block_with_decreasing_values(size, mask, data);
-}
-
-template <>
-void big_random_block_with_decreasing_values( unsigned long size, int limit_bits, long *data) 
-{
-    unsigned long mask = LNBITSTOMASK(limit_bits);
-    __inner_big_random_block_with_decreasing_values(size, mask, data);
-}
-
-template <typename T>
 void big_random_block_with_decreasing_values_and_outliers( unsigned long size, int limit_bits, T *data, unsigned long outliers_count) 
 {
     T mask = NBITSTOMASK(limit_bits);
@@ -141,6 +142,42 @@ void big_random_block_with_decreasing_values_and_outliers( unsigned long size, i
 {
     unsigned long mask = LNBITSTOMASK(limit_bits);
     __inner_big_random_block_with_decreasing_values_and_outliers(size, mask, data,  outliers_count);
+}
+
+template <typename T, typename X>
+void __inner_big_random_block_with_decreasing_values_for_aafl( unsigned long size, X mask, T *data) 
+{
+    T max = std::numeric_limits<T>::max();
+    data[0] = max;
+    T v = max & mask;
+    int block_size = CWORD_SIZE(T) * 32;
+    for (unsigned long i = 1; i < size; i++){ //ensure load close to maximum for all warps
+        data[i] = max - v;
+        if((i-1) % block_size == 0)  { //delta always resets per block 
+            data[i-1] = data[0];
+        }
+    }
+    /* exit(0); */
+}
+template <typename T>
+void big_random_block_with_decreasing_values_for_aafl( unsigned long size, int limit_bits, T *data) 
+{
+    T mask = NBITSTOMASK(limit_bits);
+    __inner_big_random_block_with_decreasing_values_for_aafl (size, mask, data);
+}
+
+template <>
+void big_random_block_with_decreasing_values_for_aafl( unsigned long size, int limit_bits, unsigned long *data) 
+{
+    unsigned long mask = LNBITSTOMASK(limit_bits);
+    __inner_big_random_block_with_decreasing_values_for_aafl (size, mask, data);
+}
+
+template <>
+void big_random_block_with_decreasing_values_for_aafl( unsigned long size, int limit_bits, long *data)
+{
+    unsigned long mask = LNBITSTOMASK(limit_bits);
+   __inner_big_random_block_with_decreasing_values_for_aafl (size, mask, data);
 }
 
 template <typename T, typename X>
@@ -204,6 +241,7 @@ template void big_random_block <X> ( unsigned long size, int limit_bits, X *data
 template void big_random_block_with_outliers <X> ( unsigned long size, int outlier_count, int limit_bits, int outlier_bits,  X *data);\
 template unsigned long compare_arrays <X> (X *in1, X *in2, unsigned long size);\
 template void big_random_block_with_decreasing_values <X> ( unsigned long size, int limit_bits, X *data);\
-template void big_random_block_with_decreasing_values_and_outliers <X> ( unsigned long size, int limit_bits, X *data, unsigned long outliers_count); 
+template void big_random_block_with_decreasing_values_and_outliers <X> ( unsigned long size, int limit_bits, X *data, unsigned long outliers_count);\
+template void big_random_block_with_decreasing_values_for_aafl<X>( unsigned long size, int limit_bits, X *data);
 
 FOR_EACH(DATA_FUNC_SPEC, int, long, unsigned int, unsigned long)
