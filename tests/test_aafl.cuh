@@ -64,4 +64,28 @@ class test_aafl: public virtual test_base<T, CWARP_SIZE>
         }
 };
 
+template <typename T, int CWARP_SIZE> 
+class test_aafl_optimistic: public virtual test_aafl <T, CWARP_SIZE> {
+    public:
+        virtual void initializeData(int bit_length) {
+            cudaMemset(this->host_data, 0, this->data_size); 
+        }
+};
+
+template <typename T, int CWARP_SIZE> 
+class test_aafl_pesymistic: public virtual test_aafl <T, CWARP_SIZE> {
+    public:
+        virtual void initializeData(int bit_length) {
+            T max = std::numeric_limits<T>::max() >> 1;
+            unsigned long i;
+            for (i = 0; i < this->data_size/sizeof(T); ++i) {
+                this->host_data[i] = max;
+            }
+        }
+        virtual int run(unsigned long max_size, bool print = false, unsigned int fixed_bit_lenght=0)
+        {
+            return test_aafl<T, CWARP_SIZE>::run(max_size, print, sizeof(T) * 8-1);
+        }
+};
+
 #endif /* end of include guard: TEST_AAFL_CUH_BUYDHFII */
