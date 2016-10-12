@@ -13,11 +13,11 @@
 #include "test_delta_pafl.cuh"
 
 #define RUN_FILE_BENCHMARK_TEST(NAME, CNAME, TPARAM, IPARAM, FILENAME, COMP_PARAMS, SORT)\
-TEST_CASE( NAME " real data benchmark test", "[.][" NAME "][REAL]" ) {\
+TEST_CASE( NAME " real data benchmark test on " FILENAME, "[.][" NAME "][REAL][" FILENAME "]" ) {\
     SECTION("int: BENCHMARK data set")   {\
             CNAME <TPARAM, IPARAM> test;\
-            printf(NAME " ");\
-            CHECK(test.run_on_file(FILENAME, COMP_PARAMS, true, SORT)==0);\
+            printf(NAME "; ");\
+            CHECK(test.run_on_file("real_data_benchmarks/" FILENAME ".bin", COMP_PARAMS, true, SORT)==0);\
     }\
 }
 

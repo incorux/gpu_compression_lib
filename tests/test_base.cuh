@@ -174,9 +174,9 @@ class test_base
             pre_setup_file_read(fname);
 
             this->bit_length = fixed_bit_lenght;
-            this->max_size = this->fsize;
+            this->max_size = this->fsize / sizeof(int);
 
-            pre_setup(this->fsize);
+            pre_setup(this->fsize/sizeof(int));
 
             int error_count = 0;
 
@@ -221,7 +221,7 @@ class test_base
 
             if(print) {
                 PPRINT_THROUGPUT(("%s; %s; %d", __PRETTY_FUNCTION__, typeid(T).name(), this->bit_length), data_size);
-                print_compressed_data_size();
+                /* print_compressed_data_size(); */
             }
 
             mmCudaFreeAll(manager);
