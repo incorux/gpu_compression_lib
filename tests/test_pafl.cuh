@@ -87,4 +87,13 @@ class test_pafl: public virtual test_base<T, CWARP_SIZE>
         float outlier_percent;
 };
 
+template <typename T, char CWARP_SIZE> 
+class test_pafl_optimistic: public virtual test_pafl<T, CWARP_SIZE> 
+{
+public:
+        virtual void initializeData(int bit_length) {
+            big_random_block(this->max_size, bit_length, this->host_data);
+        }
+};
+
 #endif /* end of include guard: TEST_PAFL_CUH_YCIJ79CD */

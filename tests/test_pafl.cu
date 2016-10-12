@@ -17,4 +17,6 @@ RUN_TEST("PFL", test_pafl, 1);
 
 RUN_PERF_TEST("PAFL", test_pafl, 32);
 RUN_PERF_TEST("PFL", test_pafl, 1);
+
 RUN_BENCHMARK_TEST("PAFL", test_pafl, 32);
+RUN_BENCHMARK_TEST("PAFL_OPT", test_pafl_optimistic, 32);
