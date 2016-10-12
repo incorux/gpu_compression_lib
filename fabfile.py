@@ -18,7 +18,7 @@ hosts_config = {
 
 @task
 def sync():
-    exclude_list=['benchmarks*',]
+    exclude_list=['benchmarks*', 'real_data_benchmarks*']
     project.rsync_project(remote_dir=hosts_config[env.host], exclude=exclude_list, default_opts="-pthrz")
 
 @task
