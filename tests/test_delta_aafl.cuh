@@ -21,7 +21,7 @@ class test_delta_aafl: public test_aafl <T, CWARP_SIZE>, public test_delta <T, C
     }
 
     virtual void initializeData(int bit_length) {
-            big_random_block_with_decreasing_values ((unsigned long)this->max_size, bit_length, this->host_data);
+            big_random_block_with_decreasing_values_for_aafl ((unsigned long)this->max_size, bit_length, this->host_data);
     }
 
     // Clean up before compression
