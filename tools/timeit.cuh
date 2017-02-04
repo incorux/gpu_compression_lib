@@ -6,7 +6,7 @@
 // Time measuring tools
 typedef struct timeit_info
 {
-    float __elapsedTime; 
+    float __elapsedTime;
     cudaEvent_t __start;
     cudaEvent_t __stop;
     char *name;

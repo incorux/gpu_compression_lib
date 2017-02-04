@@ -7,15 +7,15 @@ public:
     Event (std::string name):
     name(name)
     {
-        cudaEventCreate( &(_start) ); 
-        cudaEventCreate( &(_stop) ); 
+        cudaEventCreate( &(_start) );
+        cudaEventCreate( &(_stop) );
     };
 
-    void start() { 
+    void start() {
         cudaEventRecord( _start, 0 );
     };
 
-    void stop() { 
+    void stop() {
         cudaEventRecord( _stop, 0 );
         cudaEventSynchronize( _stop );
         cudaEventElapsedTime( &(_elapsedTime), _start, _stop );
@@ -24,7 +24,7 @@ public:
     virtual ~Event ();
 
 protected:
-    float _elapsedTime; 
+    float _elapsedTime;
     cudaEvent_t _start;
     cudaEvent_t _stop;
     std::string name;
@@ -34,7 +34,7 @@ class EventBlock
 {
 public:
     EventBlock (std::string name):
-        name(name) 
+        name(name)
     {
         eventList = new std::list<Event *> ();
 
@@ -61,8 +61,8 @@ private:
 class PerformanceLogger
 {
 public:
-    PerformanceLogger (std::string name): 
-        name(name) 
+    PerformanceLogger (std::string name):
+        name(name)
     {
         eventBlockList = new std::list<EventBlock *> ();
     };

@@ -5,9 +5,9 @@ void tiStart(tiManager &manager)
 {
     timeit_info *el = (timeit_info *) malloc (sizeof(timeit_info));
     memset(el, 0 , sizeof(*el));
-    
-    cudaEventCreate( &(el->__start) ); 
-    cudaEventCreate( &(el->__stop) ); 
+
+    cudaEventCreate( &(el->__start) );
+    cudaEventCreate( &(el->__stop) );
     cudaEventRecord( el->__start, 0 );
 
     manager.push_front(el);
@@ -20,7 +20,7 @@ void tiEnd(tiManager &manager, const char * name)
     cudaEventRecord( el->__stop, 0 );
     cudaEventSynchronize( el->__stop );
     cudaEventElapsedTime( &(el->__elapsedTime), el->__start, el->__stop );
-    
+
     el->name = strdup(name);
 }
 void tiPreatyPrint(tiManager &manager)

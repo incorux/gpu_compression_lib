@@ -1,7 +1,7 @@
 #ifndef _TOOLS
 #define _TOOLS true
 
-#include "cuda.cuh"
+#include "compression/util_cuda.cuh"
 #include "memory.cuh"
 #include "data.cuh"
 #include "timeit.cuh"

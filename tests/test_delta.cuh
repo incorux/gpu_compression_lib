@@ -1,14 +1,15 @@
-#ifndef TEST_DELTA_CUH_ISZ6QCRW
-#define TEST_DELTA_CUH_ISZ6QCRW
+#pragma once
+
 #include "test_base.cuh"
 #include "tools/data.cuh"
-#include "compression/delta_gpu.cuh"
+#include "compression/delta.cuh"
+#include <limits>
 
 
-template <typename T, char CWARP_SIZE> 
-class test_delta: public virtual test_base<T, CWARP_SIZE> 
+template <typename T, char CWARP_SIZE>
+class test_delta: public virtual test_base<T, CWARP_SIZE>
 {
-    public: 
+    public:
         virtual void allocateMemory() {
             test_base <T, CWARP_SIZE>::allocateMemory();
             iner_allocateMemory();
@@ -52,5 +53,3 @@ class test_delta: public virtual test_base<T, CWARP_SIZE>
         T *dev_data_block_start;
         unsigned long compression_blocks_count;
 };
-
-#endif /* end of include guard: TEST_DELTA_CUH_ISZ6QCRW */

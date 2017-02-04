@@ -1,7 +1,7 @@
 #include "tools/tools.cuh"
 
-#include "compression/afl_gpu.cuh"
-#include "compression/pafl_gpu.cuh"
+#include "compression/afl.cuh"
+#include "compression/pafl.cuh"
 
 #include <cuda.h>
 #include <stdio.h>

@@ -2,7 +2,7 @@
 #define TEST_BASE_CUH_WT3FRCI9
 
 #include "catch.hpp"
-#include "config.cuh" 
+#include "config.cuh"
 #include "tools/tools.cuh"
 
 #include <typeinfo>
@@ -30,7 +30,7 @@ class test_base
             mmCudaMallocHost(manager, (void**)&host_data,  data_size);
             mmCudaMallocHost(manager, (void**)&host_data2, data_size);
 
-            mmCudaMalloc(manager, (void **) &dev_out, compressed_data_size); 
+            mmCudaMalloc(manager, (void **) &dev_out, compressed_data_size);
             mmCudaMalloc(manager, (void **) &dev_data, data_size);
         }
 
@@ -51,7 +51,7 @@ class test_base
         }
 
         virtual void transferDataFromGPU() {
-            cudaMemset(host_data2, 0, data_size); 
+            cudaMemset(host_data2, 0, data_size);
             gpuErrchk(cudaMemcpy(host_data2, dev_data, data_size, cudaMemcpyDeviceToHost));
         }
 
@@ -119,9 +119,9 @@ class test_base
                 transferDataFromGPU();
                 TIMEIT_END("G->M");
 
-                if(testData()) { 
-                    printf("\n===== %d =====\n", _bit_lenght); 
-                    error_count +=1; 
+                if(testData()) {
+                    printf("\n===== %d =====\n", _bit_lenght);
+                    error_count +=1;
                 }
 
                 if(print) PPRINT_THROUGPUT(("%s; %s; %d", __PRETTY_FUNCTION__, typeid(T).name(), _bit_lenght), data_size);
@@ -214,9 +214,9 @@ class test_base
             transferDataFromGPU();
             TIMEIT_END("G->M");
 
-            if(testData()) { 
-                printf("\n===== %d =====\n", this->bit_length); 
-                error_count +=1; 
+            if(testData()) {
+                printf("\n===== %d =====\n", this->bit_length);
+                error_count +=1;
             }
 
             if(print) {
@@ -237,7 +237,7 @@ class test_base
     protected:
         T *dev_out;
         T *dev_data;
-        T *host_data; 
+        T *host_data;
         T *host_data2;
 
         unsigned int cword;
@@ -264,6 +264,13 @@ class test_base
         SECTION("long: MEDIUM data set")        { CNAME <long, PARAM> test ; CHECK(test.run(MEDIUM_DATA_SET) == 0 );}\
     }
 
+#define RUN_TEST_SIGNED(NAME, CNAME, PARAM)\
+    TEST_CASE( NAME " test set", "[" NAME "][SMALL]") {\
+        SECTION("int: SMALL ALIGNED data set")  { CNAME <int, PARAM> test  ; CHECK(test.run(SMALL_ALIGNED_DATA_SET) == 0 );}\
+        SECTION("int: SMALL data set")          { CNAME <int, PARAM> test  ; CHECK(test.run(SMALL_DATA_SET) == 0 );}\
+        SECTION("int: MEDIUM data set")         { CNAME <int, PARAM> test  ; CHECK(test.run(MEDIUM_DATA_SET) == 0 );}\
+    }
+
 #define RUN_PERF_TEST(NAME, CNAME, PARAM)\
     TEST_CASE( NAME " performance test", "[" NAME "][PERF]" ) {\
         SECTION("int: PERF data set")   {\
@@ -276,7 +283,7 @@ class test_base
         }\
     }
 
-#define KB(x) (x) * 1000 
+#define KB(x) (x) * 1000
 #define MB(x) (x) * 1000 * KB(1)
 #define GB(x) (x) * 1000 * MB(1)
 

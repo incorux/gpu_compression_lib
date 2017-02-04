@@ -3,7 +3,7 @@
 void mmCudaMallocHost(mmManager &manager, void **data, unsigned long size)
 {
     gpuErrchk(cudaMallocHost(data, size));
-    allocation_info el;// = {.data = *data, .size = size, .device = 0}; -- clang warns about this construction -- strange behavior 
+    allocation_info el;
     el.data = *data;
     el.size = size;
     el.device = 0;
@@ -13,7 +13,7 @@ void mmCudaMallocHost(mmManager &manager, void **data, unsigned long size)
 void mmCudaMalloc(mmManager &manager, void **data, unsigned long size)
 {
     gpuErrchk(cudaMalloc(data, size));
-    allocation_info el;// = {.data = *data, .size = size, .device = 1};
+    allocation_info el;
     el.data = *data;
     el.size = size;
     el.device = 1;
@@ -24,7 +24,7 @@ void mmCudaMalloc(mmManager &manager, void **data, unsigned long size)
 void __mmCudaFreeInternal(allocation_info *d)
 {
     if (!(*d).freed) {
-        if ((*d).device) { 
+        if ((*d).device) {
             gpuErrchk(cudaFree((*d).data));
         } else {
             gpuErrchk(cudaFreeHost((*d).data));
@@ -36,7 +36,7 @@ void __mmCudaFreeInternal(allocation_info *d)
 void mmCudaFreeAll(mmManager &manager)
 {
    mmManager::iterator i;
-   for(i=manager.begin(); i != manager.end(); ++i) 
+   for(i=manager.begin(); i != manager.end(); ++i)
        __mmCudaFreeInternal(&(*i));
    manager.clear();
 }
@@ -50,7 +50,7 @@ void mmCudaReportUsage( mmManager &manager)
    printf("Memory usage report\n");
    for(i=manager.begin(); i != manager.end(); ++i) {
        if (!(*i).freed) {
-           if ((*i).device) { 
+           if ((*i).device) {
                gpu_size += (*i).size;
                printf("GPU %ld\n", (*i).size);
            } else {
@@ -65,7 +65,7 @@ void mmCudaReportUsage( mmManager &manager)
 void mmCudaFree(mmManager &manager, void *ptr)
 {
    mmManager::iterator i;
-   for(i=manager.begin(); i != manager.end(); ++i) 
+   for(i=manager.begin(); i != manager.end(); ++i)
        if ((*i).data == ptr) __mmCudaFreeInternal(&(*i));
 }
 

@@ -1,14 +1,9 @@
-#ifndef TEST_AFL_CUH_VSFESWCR
-#define TEST_AFL_CUH_VSFESWCR
+#pragma once
 
 #include "catch.hpp"
-
 #include "tools/tools.cuh"
-
-#include "compression/afl_gpu.cuh"
-
+#include "compression/afl.cuh"
 #include "tests/test_base.cuh"
-
 
 template <typename T, int CWARP_SIZE> class test_afl: public test_base<T, CWARP_SIZE> {
     public:
@@ -21,26 +16,25 @@ template <typename T, int CWARP_SIZE> class test_afl: public test_base<T, CWARP_
     }
 };
 
-
 template <typename T, int CWARP_SIZE> class test_afl_random_access: public test_afl<T, CWARP_SIZE> {
-    public: 
+    public:
     virtual void decompressData(int bit_length) {
         run_afl_decompress_value_gpu <T, CWARP_SIZE> (bit_length, this->dev_out, this->dev_data, this->max_size);
     }
 };
 
 template <typename T, int CWARP_SIZE> class test_afl_cpu: public test_afl<T, CWARP_SIZE> {
-public: 
+public:
 
    virtual void allocateMemory() {
         mmCudaMallocHost(this->manager, (void**)&this->host_data,  this->data_size);
         mmCudaMallocHost(this->manager, (void**)&this->host_data2, this->data_size);
 
-        mmCudaMallocHost(this->manager, (void **)&this->host_out, this->data_size); 
+        mmCudaMallocHost(this->manager, (void **)&this->host_out, this->data_size);
     }
 
     virtual void transferDataToGPU() {}
-    virtual void cleanBeforeCompress() {} 
+    virtual void cleanBeforeCompress() {}
     virtual void errorCheck() {}
     virtual void cleanBeforeDecompress() {}
     virtual void transferDataFromGPU() {}
@@ -57,7 +51,7 @@ protected:
 };
 
 template <typename T, int CWARP_SIZE> class test_afl_random_access_cpu: public test_afl_cpu<T, CWARP_SIZE> {
-public: 
+public:
     virtual void compressData(int bit_length) {
         run_afl_compress_value_cpu <T, CWARP_SIZE> (bit_length, this->host_data, this->host_out, this->max_size);
     }
@@ -68,5 +62,3 @@ public:
 protected:
         T *host_out;
 };
-
-#endif /* end of include guard: TEST_AFL_CUH_VSFESWCR */

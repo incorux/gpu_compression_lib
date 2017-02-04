@@ -1,5 +1,5 @@
 #include "catch.hpp"
-#include "compression/macros.cuh"
+#include "compression/util_ptx.cuh"
 #include <stdio.h>
 
 TEST_CASE("SETNPBITS", "[MACROS]") {

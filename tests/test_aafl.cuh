@@ -2,7 +2,7 @@
 #define TEST_AAFL_CUH_BUYDHFII
 
 #include "test_base.cuh"
-#include "compression/aafl_gpu.cuh"
+#include "compression/aafl.cuh"
 #include "tools/tools.cuh"
 
 template <typename T, int CWARP_SIZE> 

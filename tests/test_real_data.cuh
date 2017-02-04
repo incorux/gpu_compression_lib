@@ -1,7 +1,7 @@
 #ifndef TEST_REAL_DATA_H
 #define TEST_REAL_DATA_H
 #include "catch.hpp"
-#include "../compression/macros.cuh"
+#include "../compression/util_ptx.cuh"
 
 #include "test_aafl.cuh"
 #include "test_afl.cuh"

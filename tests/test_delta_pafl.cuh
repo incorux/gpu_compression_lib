@@ -2,7 +2,7 @@
 #define TEST_DELTA_PAFL_H
 #include "test_pafl.cuh"
 #include "test_delta.cuh"
-#include "compression/pafl_gpu.cuh"
+#include "compression/pafl.cuh"
 
 template <typename T, char CWARP_SIZE> 
 class test_delta_pafl: public virtual test_pafl <T, CWARP_SIZE>, public virtual test_delta <T, CWARP_SIZE>

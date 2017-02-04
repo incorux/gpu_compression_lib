@@ -2,7 +2,7 @@
 #define TEST_DELTA_AFL_H
 #include "test_aafl.cuh"
 #include "test_delta.cuh"
-#include "compression/aafl_gpu.cuh"
+#include "compression/aafl.cuh"
 
 template <typename T, char CWARP_SIZE> 
 class test_delta_aafl: public test_aafl <T, CWARP_SIZE>, public test_delta <T, CWARP_SIZE>

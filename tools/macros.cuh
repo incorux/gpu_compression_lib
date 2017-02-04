@@ -19,8 +19,8 @@ inline int getenv_extract_int(const char *env_name, int min, int max, int defaul
        if (ret < min) ret = min;
        if (ret > max) ret = max;
    }
-   
-   if (if_debug() && ret != default_value) 
+
+   if (if_debug() && ret != default_value)
        printf("Setting %s to %d\n", env_name, ret);
 
    return ret;

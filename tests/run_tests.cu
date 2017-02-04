@@ -49,11 +49,20 @@ void setValidDeviceNumber( int i ) {
     }
 }
 
-int main(int argc, char** argv)
+int main( int argc, char* const argv[] )
 {
+  Catch::Session session; // There must be exactly once instance
 
-    Catch::Session session;
-    session.applyCommandLine(argc, argv, Catch::Session::OnUnusedOptions::Ignore);
+  // writing to session.configData() here sets defaults
+  // this is the preferred way to set them
+
+  int returnCode = session.applyCommandLine( argc, argv );
+  if( returnCode != 0 ) // Indicates a command line error
+    return returnCode;
+
+  // writing to session.configData() or session.Config() here 
+  // overrides command line args
+  // only do this if you know you need to
 
     char* GPU_DEVICE;
     GPU_DEVICE = getenv ("GPU_DEVICE");
@@ -63,21 +72,6 @@ int main(int argc, char** argv)
 
     if (dev_id >= 0) 
         setValidDeviceNumber(dev_id);
-        
 
-    /* OtherOpt config; */
-    /* Catch::Clara::CommandLine<OtherOpt> cli; */
-
-    /* cli["-D"]["--device"] */
-    /*     .describe( "Set cuda device" ) */
-    /*     .bind( &OtherOpt::setValidDeviceNumber, "deviceNumber"); */
-
-    /* cli.parseInto( argc-1, argv+1, config );  //parse extra args (like cuda device) */
-
-    /* if(session.configData().showHelp) { */
-    /*     Catch::cout() << "\ngpu_compression_lib specific options\n"; */
-    /*     cli.usage(Catch::cout(), session.configData().processName); */
-    /* } */
-    
-    return session.run();
+  return session.run();
 }

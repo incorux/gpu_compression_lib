@@ -1,7 +1,7 @@
 #ifndef TEST_PAFL_CUH_YCIJ79CD
 #define TEST_PAFL_CUH_YCIJ79CD
 #include "test_base.cuh"
-#include "compression/pafl_gpu.cuh"
+#include "compression/pafl.cuh"
 
 template <typename T, char CWARP_SIZE> 
 class test_pafl: public virtual test_base<T, CWARP_SIZE> 
