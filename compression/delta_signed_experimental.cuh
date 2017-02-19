@@ -14,11 +14,9 @@ __device__  void delta_afl_compress_signed (
 {
     if (data_id >= length) return;
 
-    T v1, value = 0;
-    unsigned int v1_pos=0, v1_len;
+    T v1, zeroLaneValue, v2;
+    unsigned int v1_pos=0, v1_len, uv1, value = 0, sgn = 0;
     unsigned long pos=comp_data_id, pos_data=data_id;
-
-    T zeroLaneValue, v2;
     const unsigned long lane = get_lane_id();
     char neighborId = lane - 1;
 
@@ -33,6 +31,7 @@ __device__  void delta_afl_compress_signed (
     for (unsigned int i = 0; i < CWORD_SIZE(T) && pos_data < length; ++i)
     {
         v1 = data[pos_data];
+
         pos_data += CWARP_SIZE;
 
         v2 = shfl_get_value(v1, neighborId);
@@ -46,26 +45,37 @@ __device__  void delta_afl_compress_signed (
             v1 = v2 - v1;
         }
 
+		sgn = ((unsigned int) v1) >> 31;
+        uv1 = abs(v1);
+
         if (v1_pos >= CWORD_SIZE(T) - bit_length){
             v1_len = CWORD_SIZE(T) - v1_pos;
-            value = value | (GETNBITS(v1, v1_len) << v1_pos);
 
-            compressed_data[pos] = value;
+			if (v1_pos == CWORD_SIZE(T) - bit_length) // whole word
+                value |= (GETNBITS(uv1, v1_len - 1) | (sgn << (v1_len - 1))) << (v1_pos);
+            else // begining of the word
+                value |= GETNBITS(uv1, v1_len) << (v1_pos);
+
+            compressed_data[pos] = reinterpret_cast<int&>(value);
 
             v1_pos = bit_length - v1_len;
-            value = GETNPBITS(v1, v1_pos, v1_len);
+
+			value = 0;
+            // if is necessary as otherwise may work with negative bit shifts
+            if (v1_pos > 0) // The last part of the word
+                value = (GETNPBITS(uv1, v1_pos - 1, v1_len)) | (sgn << (v1_pos - 1));
 
             pos += CWARP_SIZE;
         } else {
             v1_len = bit_length;
-            value = value | (GETNBITS(v1, v1_len) << v1_pos);
+            value |= (GETNBITS(uv1, v1_len-1) | (sgn << (v1_len-1))) << v1_pos;
             v1_pos += v1_len;
         }
     }
 
     if (pos_data >= length  && pos_data < length + CWARP_SIZE)
     {
-        compressed_data[pos] = value;
+        compressed_data[pos] = reinterpret_cast<int&>(value);
     }
 }
 
@@ -81,15 +91,14 @@ __device__ void delta_afl_decompress_signed (
         )
 {
     unsigned long pos = comp_data_id, pos_decomp = data_id;
-    unsigned int v1_pos = 0, v1_len;
-    T v1, ret;
+    unsigned int v1, ret, v1_pos = 0, v1_len;
 
     const unsigned long lane = get_lane_id();
 
     if (pos_decomp >= length ) // Decompress not more elements then length
         return;
 
-    v1 = compressed_data[pos];
+    v1 = reinterpret_cast<unsigned int &>(compressed_data[pos]);
 
     T zeroLaneValue = 0, v2 = 0;
 
@@ -106,10 +115,10 @@ __device__ void delta_afl_decompress_signed (
             ret = GETNPBITS(v1, v1_len, v1_pos);
 
             pos += CWARP_SIZE;
-            v1 = compressed_data[pos];
+            v1 = reinterpret_cast<unsigned int &>(compressed_data[pos]);
 
             v1_pos = bit_length - v1_len;
-            ret = ret | ((GETNBITS(v1, v1_pos))<< v1_len);
+            ret = ret | (GETNBITS(v1, v1_pos) << v1_len);
         } else {
             v1_len = bit_length;
             ret = GETNPBITS(v1, v1_len, v1_pos);
@@ -119,8 +128,12 @@ __device__ void delta_afl_decompress_signed (
         ret = shfl_prefix_sum(ret); // prefix sum deltas
         v2 = shfl_get_value(zeroLaneValue, 0);
         ret = v2 - ret;
+        // TODO: dirty hack
+        int sgn_multiply = (ret >> (bit_length-1)) ? -1 : 1;
+        // END
+        ret &= NBITSTOMASK(bit_length-1);
 
-        data[pos_decomp] = ret;
+        data[pos_decomp] = sgn_multiply * (int)(ret);
         pos_decomp += CWARP_SIZE;
 
         v2 = shfl_get_value(ret, 31);

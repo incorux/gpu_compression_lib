@@ -16,7 +16,7 @@ class test_delta: public virtual test_base<T, CWARP_SIZE>
         }
 
         virtual void iner_allocateMemory() {
-            mmCudaMalloc(this->manager, (void **) &this->dev_data_block_start, compression_blocks_count * sizeof(unsigned long));
+            mmCudaMalloc(this->manager, (void **) &this->dev_data_block_start, compression_blocks_count * sizeof(signed long));
         }
 
         virtual void setup(unsigned long max_size) {

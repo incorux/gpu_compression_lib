@@ -224,7 +224,7 @@ unsigned long compare_arrays(T *in1, T *in2, unsigned long size)
     // on most platforms memcmp should be faster (i.e. simd optimizations)
     precheck = memcmp(in1, in2, size*sizeof(T));
     if(precheck) // count errors if memcmp fails
-        for(unsigned long i = 0; i < size; i++) {
+        for(unsigned long i = 0; i < 10; i++) {
             if(in1[i] != in2[i]) {
                 count_errors += 1;
                 compare_arrays_element_print(i, in1[i], in2[i]);

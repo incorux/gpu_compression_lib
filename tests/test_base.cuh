@@ -85,7 +85,7 @@ class test_base
                 max_bit_lenght = fixed_bit_lenght + 1;
             }
 
-            for (unsigned int _bit_lenght = min_bit_lenght; _bit_lenght < max_bit_lenght; ++_bit_lenght) {
+            for (unsigned int _bit_lenght = 13; _bit_lenght < 14; ++_bit_lenght) {
                 this->bit_length = _bit_lenght;
                 setup(max_size);
 

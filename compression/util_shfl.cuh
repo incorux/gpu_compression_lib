@@ -49,6 +49,11 @@ __device__ inline int shfl_prefix_sum(int value, int width=32)
     return value;
 }
 
+__device__ inline long shfl_prefix_sum(unsigned int value, int width=32)
+{
+	return shfl_prefix_sum(value, width);
+}
+
 __device__ inline long shfl_prefix_sum(long value, int width=32)
 {
     int lane_id = get_lane_id();
@@ -66,6 +71,11 @@ __device__ inline long shfl_prefix_sum(long value, int width=32)
 __device__ inline int shfl_get_value(int value, int laneId, int width=32)
 {
     return __shfl(value, laneId, width);
+}
+
+__device__ inline int shfl_get_value(unsigned int value, int laneId, int width=32)
+{
+	return __shfl(value, laneId, width);
 }
 
 __device__ inline long shfl_get_value(long value, int laneId, int width=32)
